@@ -18,7 +18,8 @@ export const unpredictableTables = {
     playerId: v.id("unpPlayers"),
     day: v.string(),
     set: v.number(),
-    status: v.union(v.literal("preparing"), v.literal("ready")),
+    status: v.union(v.literal("preparing"), v.literal("ready"), v.literal("over")),
+    lives: v.optional(v.number()),
   }).index("by_playerId_and_day", ["playerId", "day"]),
 
   unpRounds: defineTable({

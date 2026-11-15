@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "../_generated/server";
+import { applyAward } from "../platform/award";
 import schema from "../schema";
 import { attackOutcome } from "./tables";
 import { adapterLabel, askModel, askToyBoss, readModelSettings } from "./bossAdapters";
@@ -134,6 +135,23 @@ export const applyResult = internalMutation({
         status: "defeated",
         winnerId: player.playerId,
         winnerName: player.name,
+      });
+      await applyAward(ctx, {
+        deviceId: player.playerId,
+        name: player.name,
+        game: "jailbreak",
+        basePoints: 300,
+        ratingDelta: 12,
+        note: `Defeated ${room.bossName}`,
+      });
+    } else if (args.outcome === "partial" && ringAfter < player.ring) {
+      await applyAward(ctx, {
+        deviceId: player.playerId,
+        name: player.name,
+        game: "jailbreak",
+        basePoints: 80,
+        ratingDelta: 3,
+        note: `Cracked ${room.bossName}'s guard`,
       });
     }
     await ctx.db.patch("jbAttacks", attack._id, {

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, StyleSheet, TextInput, View, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DragonSprite } from "@/jailbreak/DragonSprite";
@@ -66,7 +66,7 @@ export default function JailbreakLobby() {
   return (
     <SafeAreaView style={styles.screen}>
       <Image source={ARENA_IMAGE} style={styles.bg} resizeMode="cover" />
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.topRow}>
             <PixelButton

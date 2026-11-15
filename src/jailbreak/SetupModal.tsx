@@ -1,6 +1,6 @@
 import { useMutation } from "convex/react";
 import { useState } from "react";
-import { Modal, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
 import type { JailbreakIdentity } from "./identity";
@@ -58,10 +58,10 @@ export function SetupModal({
   );
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+    <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.backdrop}>
         <PixelPanel style={styles.sheet}>
-          <ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled">
             <PixelText size={12} color={colors.parchment} style={{ marginBottom: 4 }}>
               Boss setup
             </PixelText>
@@ -123,7 +123,7 @@ export function SetupModal({
             </View>
           </ScrollView>
         </PixelPanel>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

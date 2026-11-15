@@ -18,6 +18,9 @@ export default function Index() {
       <Link href="/unpredictable" style={styles.link}>
         Play Unpredictable
       </Link>
+      <Link href="/jailbreak" style={[styles.link, styles.jailbreak]} testID="open-jailbreak">
+        Play Jailbreak Boss
+      </Link>
     </View>
   );
 }
@@ -41,5 +44,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#6D5BFF",
     padding: 12,
+  },
+  jailbreak: {
+    color: "#E2421B",
   },
 });

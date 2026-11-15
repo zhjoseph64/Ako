@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import { jailbreakTables } from "./jailbreak/tables";
 import { unpredictableTables } from "./unpredictable/tables";
 
 export default defineSchema({
@@ -9,4 +10,5 @@ export default defineSchema({
     value: v.number(),
   }).index("by_name", ["name"]),
   ...unpredictableTables,
+  ...jailbreakTables,
 });

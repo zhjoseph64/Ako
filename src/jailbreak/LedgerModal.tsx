@@ -21,7 +21,7 @@ export function LedgerModal({
   const entries = useQuery(api.jailbreak.rooms.ledger, { roomId, playerId: player.playerId });
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={onClose}>
+    <Modal transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <PixelPanel tone="parchment" style={styles.sheet}>
           <View style={styles.header}>

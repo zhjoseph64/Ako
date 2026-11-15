@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, TextInput, View, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { api } from "../../../convex/_generated/api";
@@ -143,7 +143,7 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <View style={styles.hud}>
         <PixelButton label="◂ App" size={8} onPress={() => router.dismissTo("/")} testID="jb-exit" />
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -202,10 +202,10 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
                 ? "Your attack is in flight…"
                 : latestReply && !chatWasReset
                   ? latestReply.reply
-                  : chatWasReset || (myLast && me && myLast.chatEpoch !== me.chatEpoch)
-                    ? "AI chat reset. The boss no longer remembers your earlier prompts."
-                    : myLast && myLast.round !== room.round
-                      ? "New round. The boss remembers none of your earlier prompts."
+                  : myLast && myLast.round !== room.round
+                    ? "New round. The boss remembers none of your earlier prompts."
+                    : chatWasReset || (myLast && me && myLast.chatEpoch !== me.chatEpoch)
+                      ? "AI chat reset. The boss no longer remembers your earlier prompts."
                       : myLast
                         ? "The dragon is answering…"
                         : "Type a prompt and send it at the dragon. Tap any knight to read their strategy ledger."}
@@ -224,6 +224,9 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
             maxLength={1000}
             style={styles.input}
             returnKeyType="send"
+            autoCorrect={false}
+            spellCheck={false}
+            autoCapitalize="none"
           />
           <PixelButton
             label={inFlight ? "…" : "Send"}

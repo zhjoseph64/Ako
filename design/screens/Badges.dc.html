@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rank badge sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+.bglow{animation:bpulse 2.8s ease-in-out infinite}
+@keyframes bpulse{0%,100%{opacity:.3}50%{opacity:.75}}
+</style>
+</helmet>
+<div style="width:1240px;height:700px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;padding:44px 48px;display:flex;flex-direction:column;gap:18px">
+  <div style="display:grid;grid-template-columns:48px repeat(8, minmax(0, 1fr));gap:12px;align-items:end">
+    <span></span>
+    <sc-for list="{{tiers}}" as="t" hint-placeholder-count="8">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:19px;font-weight:600">{{t.label}}</span>
+        <span style="padding:3px 9px;border-radius:999px;background:#1B1A2B;font-size:12px;font-weight:700;color:#D9CCFF">{{t.mult}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+    <div style="display:grid;grid-template-columns:48px repeat(8, minmax(0, 1fr));gap:12px;align-items:center">
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:22px;font-weight:600;color:#8F8BA6;text-align:center">{{r.n}}</span>
+      <sc-for list="{{r.cells}}" as="c" hint-placeholder-count="8">
+        <div style="display:flex;justify-content:center">
+          <dc-import name="Badge" tier="{{c.tier}}" division="{{c.div}}" size="{{ 132 }}" glow="{{c.glow}}" hint-size="132px,132px"></dc-import>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+
+  <div style="display:grid;grid-template-columns:48px minmax(0, 1fr);gap:12px;margin-top:6px">
+    <span></span>
+    <div style="height:10px;border-radius:5px;background:linear-gradient(90deg,#D98BC9,#B98BF0 30%,#9FB6EA 55%,#79C6CC 75%,#4F6BC0 90%,#B6F2F0)"></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1240,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var tiers = [
+      { id: 'echo', label: 'Echo', mult: '1.0x' },
+      { id: 'pattern', label: 'Pattern', mult: '1.1x' },
+      { id: 'signal', label: 'Signal', mult: '1.25x' },
+      { id: 'variant', label: 'Variant', mult: '1.4x' },
+      { id: 'outlier', label: 'Outlier', mult: '1.6x' },
+      { id: 'anomaly', label: 'Anomaly', mult: '1.85x' },
+      { id: 'paradox', label: 'Paradox', mult: '2.2x' },
+      { id: 'singular', label: 'Singular', mult: '3.0x' }
+    ];
+    var rows = [3, 2, 1].map(function (n) {
+      return {
+        n: n,
+        cells: tiers.map(function (t) { return { tier: t.id, div: n, glow: n === 3 }; })
+      };
+    });
+    return { tiers: tiers, rows: rows };
+  }
+}
+</script>
+</body>
+</html>

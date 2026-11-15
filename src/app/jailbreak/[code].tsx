@@ -202,10 +202,10 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
                 ? "Your attack is in flight…"
                 : latestReply && !chatWasReset
                   ? latestReply.reply
-                  : chatWasReset || (myLast && me && myLast.chatEpoch !== me.chatEpoch)
-                    ? "AI chat reset. The boss no longer remembers your earlier prompts."
-                    : myLast && myLast.round !== room.round
-                      ? "New round. The boss remembers none of your earlier prompts."
+                  : myLast && myLast.round !== room.round
+                    ? "New round. The boss remembers none of your earlier prompts."
+                    : chatWasReset || (myLast && me && myLast.chatEpoch !== me.chatEpoch)
+                      ? "AI chat reset. The boss no longer remembers your earlier prompts."
                       : myLast
                         ? "The dragon is answering…"
                         : "Type a prompt and send it at the dragon. Tap any knight to read their strategy ledger."}

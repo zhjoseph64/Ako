@@ -1,13 +1,31 @@
-export const colors = {
-  bg: "#0B0B12",
-  card: "#171724",
-  cardHi: "#22223A",
-  border: "#2E2E48",
-  text: "#F4F3FF",
-  dim: "#9C9AB8",
-  accent: "#8B7CFF",
-  win: "#3DDC97",
-  lose: "#FF5C7A",
-  void: "#F5B94A",
-  ai: "#FF8A4C",
+export const palette = {
+  bg: "#050a14",
+  deep: "#03070f",
+  panel: "#101d33",
+  panelHi: "#16263f",
+  border: "#1b3050",
+  shadow: "#0d1a2e",
+  text: "#e8f1ff",
+  dim: "#7d93b8",
+  cyan: "#4de3ff",
+  cyanDark: "#123048",
+  pink: "#ff5d8f",
+  pinkDark: "#7d1d3c",
+  gold: "#ffd166",
+  goldDark: "#7a5a12",
+  green: "#5dffa3",
+  greenDark: "#14532d",
+};
+
+export const fonts = {
+  display: "PressStart2P_400Regular",
+  body: "VT323_400Regular",
+};
+
+export const unit = 4;
+
+export const outcomeColor = {
+  predicted: palette.pink,
+  escaped: palette.green,
+  void: palette.gold,
 };

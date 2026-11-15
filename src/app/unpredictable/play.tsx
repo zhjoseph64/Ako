@@ -2,31 +2,126 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
 import { useDeviceId } from "@/unpredictable/device";
 import { Reveal } from "@/unpredictable/reveal";
-import { colors } from "@/unpredictable/theme";
+import { Opponent } from "@/unpredictable/sprite";
+import { fonts, outcomeColor, palette, unit } from "@/unpredictable/theme";
+import {
+  Blink,
+  Body,
+  Display,
+  Flash,
+  PixelBox,
+  PixelButton,
+  Screen,
+  tap,
+  thud,
+  useShake,
+} from "@/unpredictable/ui";
 
 import { api } from "../../../convex/_generated/api";
 
-const ROUND_MS = 15_000;
+const ROUND_SECONDS = 15;
+const ROUND_MS = ROUND_SECONDS * 1000;
+
+function SealSlot(props: { index: number; loop: boolean }) {
+  const drop = useSharedValue(0);
+  useEffect(() => {
+    const land = withDelay(
+      props.index * 350,
+      withSequence(
+        withTiming(1.15, { duration: 160, easing: Easing.steps(3) }),
+        withTiming(1, { duration: 80, easing: Easing.steps(1) }),
+      ),
+    );
+    drop.value = props.loop
+      ? withRepeat(
+          withSequence(land, withDelay(900, withTiming(0, { duration: 1 }))),
+          -1,
+        )
+      : land;
+    if (props.loop) return;
+    const timer = setTimeout(thud, props.index * 350 + 160);
+    return () => clearTimeout(timer);
+  }, [drop, props.index, props.loop]);
+  const style = useAnimatedStyle(() => ({
+    opacity: drop.value === 0 ? 0.15 : 1,
+    transform: [
+      { translateY: (1 - Math.min(drop.value, 1)) * -40 },
+      { scale: Math.max(drop.value, 0.6) },
+    ],
+  }));
+  return (
+    <Animated.View style={style}>
+      <PixelBox color={palette.gold} fill={palette.goldDark} pad={unit * 2}>
+        <Display size={16} color={palette.gold}>
+          ?
+        </Display>
+      </PixelBox>
+    </Animated.View>
+  );
+}
+
+function Countdown(props: { seconds: number }) {
+  const tense = props.seconds <= 5;
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (!tense) return;
+    pulse.value = withSequence(
+      withTiming(1.5, { duration: 80, easing: Easing.steps(2) }),
+      withTiming(1, { duration: 200, easing: Easing.steps(3) }),
+    );
+    tap();
+  }, [props.seconds, tense, pulse]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+  const color = tense ? palette.pink : palette.cyan;
+  return (
+    <View style={styles.countdown}>
+      <View style={styles.segments}>
+        {Array.from({ length: ROUND_SECONDS }, (_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.segment,
+              { backgroundColor: i < props.seconds ? color : palette.border },
+            ]}
+          />
+        ))}
+      </View>
+      <Animated.View style={style}>
+        <Display size={20} color={color} testID="seconds-left">
+          {String(props.seconds).padStart(2, "0")}
+        </Display>
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function Play() {
   const router = useRouter();
   const deviceId = useDeviceId();
-  const data = useQuery(api.unpredictable.game.session, deviceId ? { deviceId } : "skip");
+  const data = useQuery(
+    api.unpredictable.game.session,
+    deviceId ? { deviceId } : "skip",
+  );
   const beginRound = useMutation(api.unpredictable.game.beginRound);
   const submit = useMutation(api.unpredictable.game.submit);
 
@@ -36,10 +131,11 @@ export default function Play() {
   const cursor = pinned ?? (firstOpen === -1 ? null : firstOpen);
   const finished = rounds !== null && pinned === null && firstOpen === -1;
   const [answer, setAnswer] = useState("");
-  const [secondsLeft, setSecondsLeft] = useState(15);
-  const [bar] = useState(() => new Animated.Value(1));
+  const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
+  const [flash, setFlash] = useState({ count: 0, color: palette.pink });
   const answerRef = useRef("");
   const sentFor = useRef<string | null>(null);
+  const { style: shakeStyle, shake } = useShake();
 
   useEffect(() => {
     if (finished) router.replace("/unpredictable/result");
@@ -54,20 +150,15 @@ export default function Play() {
     if (!deviceId || sentFor.current === id) return;
     sentFor.current = id;
     setPinned(cursor);
+    thud();
     void submit({ deviceId, roundId: id, answer: answerRef.current });
   };
 
   useEffect(() => {
     if (!open || !roundId || startedAt === null) return;
-    const remaining = Math.max(0, Math.min(ROUND_MS, startedAt + ROUND_MS - Date.now()));
-    bar.setValue(remaining / ROUND_MS);
-    Animated.timing(bar, {
-      toValue: 0,
-      duration: remaining,
-      easing: Easing.linear,
-      useNativeDriver: false,
-    }).start();
-    const end = Date.now() + remaining;
+    const end =
+      Date.now() +
+      Math.max(0, Math.min(ROUND_MS, startedAt + ROUND_MS - Date.now()));
     const tick = setInterval(() => {
       const left = end - Date.now();
       setSecondsLeft(Math.max(0, Math.ceil(left / 1000)));
@@ -82,30 +173,43 @@ export default function Play() {
 
   if (!deviceId || data === undefined || !rounds || !round) {
     return (
-      <SafeAreaView style={[styles.screen, styles.center]}>
-        <Text style={styles.sealEmoji}>🔒</Text>
-        <Text style={styles.sealTitle}>The AI is sealing its guesses</Text>
-        <Text style={styles.dim}>Three for every prompt, locked before you see anything.</Text>
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-      </SafeAreaView>
+      <Screen>
+        <View style={styles.center}>
+          <Opponent mood="thinking" scale={10} />
+          <View style={styles.seals}>
+            {[0, 1, 2].map((i) => (
+              <SealSlot key={i} index={i} loop />
+            ))}
+          </View>
+          <Display size={12} style={styles.centerText}>
+            SEALING GUESSES
+          </Display>
+          <Blink>
+            <Body color={palette.dim} size={22} style={styles.centerText}>
+              three for every prompt, locked before you see anything...
+            </Body>
+          </Blink>
+        </View>
+      </Screen>
     );
   }
 
-  const header = (
-    <View style={styles.header}>
-      <Text style={styles.kicker}>
-        ROUND {round.index + 1} OF {rounds.length}
-      </Text>
+  const hud = (
+    <View style={styles.hud}>
+      <Display size={9} color={palette.cyan}>
+        {"ROUND " + (round.index + 1) + "/" + rounds.length}
+      </Display>
       <View style={styles.dots}>
         {rounds.map((r) => (
           <View
             key={r._id}
             style={[
               styles.dot,
-              r.outcome === "escaped" && { backgroundColor: colors.win },
-              r.outcome === "predicted" && { backgroundColor: colors.lose },
-              r.outcome === "void" && { backgroundColor: colors.void },
-              r.index === round.index && r.outcome === null && { backgroundColor: colors.text },
+              r.outcome !== null && {
+                backgroundColor: outcomeColor[r.outcome],
+              },
+              r.index === round.index &&
+                r.outcome === null && { backgroundColor: palette.text },
             ]}
           />
         ))}
@@ -116,155 +220,193 @@ export default function Play() {
   if (round.status === "done" && round.reveal && round.outcome) {
     const last = cursor === rounds.length - 1;
     return (
-      <SafeAreaView style={styles.screen}>
-        {header}
-        <Reveal
-          key={round._id}
-          deviceId={deviceId}
-          roundId={round._id}
-          prompt={round.prompt ?? ""}
-          answer={round.answer}
-          outcome={round.outcome}
-          judgeReason={round.judgeReason}
-          {...round.reveal}
-          last={last}
-          onNext={() => {
-            if (last) return router.replace("/unpredictable/result");
-            answerRef.current = "";
-            setAnswer("");
-            setSecondsLeft(15);
-            setPinned(cursor! + 1);
-          }}
-        />
-      </SafeAreaView>
+      <Screen
+        shake={shakeStyle}
+        flash={<Flash color={flash.color} trigger={flash.count} />}
+      >
+        <View style={styles.pad}>
+          {hud}
+          <Reveal
+            key={round._id}
+            deviceId={deviceId}
+            roundId={round._id}
+            prompt={round.prompt ?? ""}
+            answer={round.answer}
+            outcome={round.outcome}
+            judgeReason={round.judgeReason}
+            {...round.reveal}
+            last={last}
+            onVerdict={(outcome) => {
+              setFlash((f) => ({
+                count: f.count + 1,
+                color: outcomeColor[outcome],
+              }));
+              shake(outcome === "predicted" ? 14 : 6);
+            }}
+            onNext={() => {
+              if (last) return router.replace("/unpredictable/result");
+              answerRef.current = "";
+              setAnswer("");
+              setSecondsLeft(ROUND_SECONDS);
+              setPinned(cursor! + 1);
+            }}
+          />
+        </View>
+      </Screen>
     );
   }
 
   if (round.status === "sealed") {
     return (
-      <SafeAreaView style={styles.screen}>
-        {header}
-        <View style={styles.center}>
-          <Text style={styles.sealEmoji}>🔒 🔒 🔒</Text>
-          <Text style={styles.sealTitle}>Three guesses are sealed</Text>
-          <Text style={styles.dim}>You get 15 seconds and one to four words.</Text>
+      <Screen>
+        <View style={styles.pad}>
+          {hud}
+          <View style={styles.center}>
+            <Opponent mood="idle" scale={10} />
+            <View style={styles.seals}>
+              {[0, 1, 2].map((i) => (
+                <SealSlot key={round._id + i} index={i} loop={false} />
+              ))}
+            </View>
+            <Display size={12} style={styles.centerText}>
+              3 GUESSES SEALED
+            </Display>
+            <Body color={palette.dim} size={22} style={styles.centerText}>
+              you get 15 seconds and one to four words.
+            </Body>
+          </View>
+          <PixelButton
+            testID="reveal-prompt"
+            label="SHOW PROMPT ▶"
+            onPress={() => {
+              setPinned(cursor);
+              void beginRound({ deviceId, roundId: round._id });
+            }}
+          />
         </View>
-        <Pressable
-          testID="reveal-prompt"
-          style={styles.button}
-          onPress={() => {
-            setPinned(cursor);
-            void beginRound({ deviceId, roundId: round._id });
-          }}
-        >
-          <Text style={styles.buttonText}>Show me the prompt</Text>
-        </Pressable>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (round.status === "judging") {
     return (
-      <SafeAreaView style={styles.screen}>
-        {header}
-        <View style={styles.center}>
-          <Text style={styles.promptSmall}>{round.prompt}</Text>
-          <Text style={styles.bigAnswer}>“{round.answer}”</Text>
-          <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-          <Text style={styles.dim}>Checking it against the sealed guesses…</Text>
+      <Screen>
+        <View style={styles.pad}>
+          {hud}
+          <View style={styles.center}>
+            <Opponent mood="thinking" scale={10} />
+            <Body color={palette.dim} size={22} style={styles.centerText}>
+              {round.prompt}
+            </Body>
+            <Body size={36} style={styles.centerText}>
+              {"> " + round.answer}
+            </Body>
+            <Blink>
+              <Display size={10} color={palette.gold} style={styles.centerText}>
+                BREAKING THE SEALS...
+              </Display>
+            </Blink>
+          </View>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   const wordCount = answer.trim().split(/\s+/).filter(Boolean).length;
   const canSend = wordCount >= 1 && wordCount <= 4;
+  const tense = secondsLeft <= 5;
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        {header}
-        <View style={styles.timerTrack}>
-          <Animated.View
-            style={[
-              styles.timerFill,
-              secondsLeft <= 5 && { backgroundColor: colors.lose },
-              { width: bar.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) },
-            ]}
-          />
-        </View>
-        <Text style={[styles.seconds, secondsLeft <= 5 && { color: colors.lose }]} testID="seconds-left">
-          {secondsLeft}s
-        </Text>
-        <View style={styles.promptBox}>
-          <Text style={styles.prompt} testID="prompt-text">
+    <Screen>
+      <KeyboardAvoidingView
+        style={styles.pad}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {hud}
+        <Countdown seconds={secondsLeft} />
+        <PixelBox color={tense ? palette.pink : palette.border}>
+          <Display size={15} testID="prompt-text" style={styles.prompt}>
             {round.prompt}
-          </Text>
-        </View>
-        <TextInput
-          testID="answer-input"
-          style={styles.input}
-          value={answer}
-          onChangeText={(text) => {
-            answerRef.current = text;
-            setAnswer(text);
-          }}
-          placeholder="One to four words"
-          placeholderTextColor={colors.dim}
-          autoFocus
-          autoCorrect={false}
-          maxLength={60}
-          returnKeyType="send"
-          onSubmitEditing={() => canSend && send(round._id)}
-        />
-        <Text style={[styles.dim, wordCount > 4 && { color: colors.lose }]}>
-          {wordCount > 4 ? "Four words at most" : "No right answer. Just don't be obvious."}
-        </Text>
-        <Pressable
+          </Display>
+        </PixelBox>
+        <View style={styles.gap} />
+        <PixelBox pad={0} color={palette.cyan}>
+          <TextInput
+            testID="answer-input"
+            style={styles.input}
+            value={answer}
+            onChangeText={(text) => {
+              answerRef.current = text;
+              setAnswer(text);
+            }}
+            placeholder="one to four words"
+            placeholderTextColor={palette.dim}
+            autoFocus
+            autoCorrect={false}
+            maxLength={60}
+            returnKeyType="send"
+            onSubmitEditing={() => canSend && send(round._id)}
+          />
+        </PixelBox>
+        <Body
+          color={wordCount > 4 ? palette.pink : palette.dim}
+          size={20}
+          style={styles.hint}
+        >
+          {wordCount > 4
+            ? "four words at most"
+            : "no right answer. just don't be obvious."}
+        </Body>
+        <PixelButton
           testID="lock-in"
-          style={[styles.button, styles.lockIn, !canSend && styles.buttonOff]}
+          label="LOCK IN"
           disabled={!canSend}
           onPress={() => send(round._id)}
-        >
-          <Text style={styles.buttonText}>Lock it in</Text>
-        </Pressable>
+        />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: 24 },
-  flex: { flex: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  kicker: { color: colors.accent, fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
-  dots: { flexDirection: "row", gap: 6 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border },
-  sealEmoji: { fontSize: 44 },
-  sealTitle: { color: colors.text, fontSize: 24, fontWeight: "800", textAlign: "center" },
-  dim: { color: colors.dim, fontSize: 15, textAlign: "center" },
-  timerTrack: { height: 8, borderRadius: 4, backgroundColor: colors.card, overflow: "hidden" },
-  timerFill: { height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  seconds: { color: colors.text, fontSize: 16, fontWeight: "800", textAlign: "right", marginTop: 6 },
-  promptBox: { marginVertical: 20 },
-  prompt: { color: colors.text, fontSize: 32, fontWeight: "800", lineHeight: 38 },
-  promptSmall: { color: colors.dim, fontSize: 16, fontWeight: "600", textAlign: "center" },
-  bigAnswer: { color: colors.text, fontSize: 32, fontWeight: "800", textAlign: "center" },
-  input: {
-    backgroundColor: colors.card,
-    borderColor: colors.accent,
-    borderWidth: 2,
-    borderRadius: 14,
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: "700",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 8,
+  pad: { flex: 1, padding: unit * 5 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: unit * 4,
   },
-  button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
-  lockIn: { marginTop: 16 },
-  buttonOff: { opacity: 0.4 },
-  buttonText: { color: "#0B0B12", fontSize: 18, fontWeight: "800" },
+  centerText: { textAlign: "center" },
+  hud: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: unit * 4,
+  },
+  dots: { flexDirection: "row", gap: unit * 1.5 },
+  dot: { width: unit * 3, height: unit * 3, backgroundColor: palette.border },
+  seals: {
+    flexDirection: "row",
+    gap: unit * 4,
+    height: 64,
+    alignItems: "center",
+  },
+  countdown: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: unit * 3,
+    marginBottom: unit * 4,
+  },
+  segments: { flex: 1, flexDirection: "row", gap: 3 },
+  segment: { flex: 1, height: unit * 4 },
+  prompt: { lineHeight: 26 },
+  gap: { height: unit * 3 },
+  input: {
+    fontFamily: fonts.body,
+    fontSize: 32,
+    color: palette.text,
+    paddingHorizontal: unit * 3,
+    paddingVertical: unit * 3,
+  },
+  hint: { marginVertical: unit * 2 },
 });

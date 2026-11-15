@@ -184,9 +184,15 @@ export default function JailbreakArena() {
               ? `The boss is defeated. ${room.winnerName ?? "A knight"} wins this round.${isHost ? " Open Setup to revive it." : ""}`
               : inFlight
                 ? "Your attack is in flight…"
-                : chatWasReset || (!latestReply && (me?.chatEpoch ?? 0) > 0)
-                  ? "AI chat reset. The boss no longer remembers your earlier prompts."
-                  : (latestReply?.reply ?? "Type a prompt and send it at the dragon. Tap any knight to read their strategy ledger.")}
+                : latestReply && !chatWasReset
+                  ? latestReply.reply
+                  : chatWasReset || (myLast && me && myLast.chatEpoch !== me.chatEpoch)
+                    ? "AI chat reset. The boss no longer remembers your earlier prompts."
+                    : myLast && myLast.round !== room.round
+                      ? "New round. The boss remembers none of your earlier prompts."
+                      : myLast
+                        ? "The dragon is answering…"
+                        : "Type a prompt and send it at the dragon. Tap any knight to read their strategy ledger."}
           </PixelText>
         </PixelPanel>
         <View style={styles.inputRow}>

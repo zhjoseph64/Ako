@@ -1,4 +1,4 @@
-# yc-app
+# Ako
 
 Consumer mobile app that gamifies data labeling. Expo (expo-router, TypeScript) with a Convex backend, built and run on Revyl cloud devices.
 

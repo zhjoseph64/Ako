@@ -19,6 +19,7 @@ export default function JailbreakLayout() {
 
   return (
     <View nativeID="jailbreak-root" style={{ flex: 1, backgroundColor: colors.night }}>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
       {fontsLoaded ? (
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.night } }} />

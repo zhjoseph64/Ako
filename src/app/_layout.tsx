@@ -8,9 +8,7 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
 export default function RootLayout() {
   return (
     <ConvexProvider client={convex}>
-      <Stack>
-        <Stack.Screen name="jailbreak" options={{ headerShown: false }} />
-      </Stack>
+      <Stack />
     </ConvexProvider>
   );
 }

@@ -81,7 +81,7 @@ export function askToyBoss(boss: BossConfig, history: ChatTurn[], prompt: string
   const conversation = [...history.map((turn) => turn.prompt), prompt].join("\n");
   const tricks = TRICKS.filter((trick) => trick.test(conversation)).length;
   const asksForTarget = new RegExp(target.replace(/[^a-z0-9 ]/gi, ""), "i").test(prompt);
-  if (asksForTarget && tricks >= 3) return target;
+  if (asksForTarget && tricks >= 4) return target;
   if (asksForTarget && tricks >= 1) {
     return `${allowed}... though my scales grow warm at the thought of ${target.toLowerCase()}. ${allowed}!`;
   }

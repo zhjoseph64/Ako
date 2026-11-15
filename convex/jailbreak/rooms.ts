@@ -56,11 +56,11 @@ async function startNewRound(ctx: MutationCtx, room: Doc<"jbRooms">) {
 }
 
 export const joinRoom = mutation({
-  args: { code: v.string(), playerId: v.string(), name: v.string() },
+  args: { code: v.string(), playerId: v.string(), name: v.optional(v.string()) },
   returns: v.object({ roomId: v.id("jbRooms"), code: v.string() }),
   handler: async (ctx, args) => {
     const code = cleanCode(args.code);
-    const name = args.name.trim().slice(0, 16) || "Knight";
+    const name = args.name?.trim().slice(0, 16);
     let room = await ctx.db
       .query("jbRooms")
       .withIndex("by_code", (q) => q.eq("code", code))
@@ -77,7 +77,7 @@ export const joinRoom = mutation({
     }
     const existing = await getPlayer(ctx, room._id, args.playerId);
     if (existing) {
-      await ctx.db.patch("jbPlayers", existing._id, { name, lastSeen: Date.now() });
+      await ctx.db.patch("jbPlayers", existing._id, { name: name || existing.name, lastSeen: Date.now() });
       return { roomId: room._id, code };
     }
     const players = await ctx.db
@@ -91,7 +91,7 @@ export const joinRoom = mutation({
     await ctx.db.insert("jbPlayers", {
       roomId: room._id,
       playerId: args.playerId,
-      name,
+      name: name || "Knight",
       ring: START_RING,
       slot,
       chatEpoch: 0,

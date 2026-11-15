@@ -34,6 +34,10 @@ export function getSavedName() {
   );
 }
 
+export function getTabName() {
+  return webStorage("sessionStorage")?.getItem(NAME_KEY) ?? (memoryName || undefined);
+}
+
 export function saveName(name: string) {
   memoryName = name;
   webStorage("sessionStorage")?.setItem(NAME_KEY, name);

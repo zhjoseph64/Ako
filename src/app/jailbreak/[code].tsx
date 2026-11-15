@@ -8,7 +8,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Arena } from "@/jailbreak/Arena";
 import { ringLabel } from "@/jailbreak/geometry";
-import { getPlayerId, getSavedName, newAttackId } from "@/jailbreak/identity";
+import { getPlayerId, getTabName, newAttackId } from "@/jailbreak/identity";
 import { LedgerModal } from "@/jailbreak/LedgerModal";
 import { SetupModal } from "@/jailbreak/SetupModal";
 import { colors, outcomeColor, PIXEL_FONT } from "@/jailbreak/theme";
@@ -51,7 +51,7 @@ export default function JailbreakArena() {
 
   useEffect(() => {
     if (!roomCode) return;
-    joinRoom({ code: roomCode, playerId, name: getSavedName() || "Knight" }).catch((e) =>
+    joinRoom({ code: roomCode, playerId, name: getTabName() }).catch((e) =>
       setJoinError(errorText(e)),
     );
   }, [joinRoom, playerId, roomCode]);
@@ -96,7 +96,9 @@ export default function JailbreakArena() {
   const inFlight = myLast?.status === "pending" || sending;
   const defeated = room.status === "defeated";
   const latestReply =
-    myLast && myLast.status !== "pending" && director.hasReacted(myLast._id) ? myLast : undefined;
+    myLast && myLast.round === room.round && myLast.status !== "pending" && director.hasReacted(myLast._id)
+      ? myLast
+      : undefined;
   const chatWasReset = me && latestReply && latestReply.chatEpoch !== me.chatEpoch;
   const chatNumber = (me?.chatEpoch ?? 0) + 1;
 

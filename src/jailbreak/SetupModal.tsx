@@ -66,7 +66,7 @@ export function SetupModal({
             </PixelText>
             <PixelText size={7} color={colors.muted} style={{ marginBottom: 10 }}>
               {isHost
-                ? "Saving starts a new round: the boss revives and every knight returns to ring 3. Past attacks stay in the ledgers."
+                ? "Saving starts a new round: the boss revives and every knight returns to ring 2. Past attacks stay in the ledgers."
                 : "Only the room host can change the boss. You can read the rules here."}
             </PixelText>
             {field("Boss name", "bossName")}

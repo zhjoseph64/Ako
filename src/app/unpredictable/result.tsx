@@ -6,8 +6,13 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 
 import { useDeviceId } from "@/unpredictable/device";
-import { Opponent } from "@/unpredictable/sprite";
-import { outcomeColor, palette, unit } from "@/unpredictable/theme";
+import { Heart, Opponent } from "@/unpredictable/sprite";
+import {
+  outcomeColor,
+  palette,
+  unit,
+  WATER_BANDS,
+} from "@/unpredictable/theme";
 import {
   BackLink,
   Body,
@@ -32,11 +37,11 @@ export default function Result() {
   const card = useRef<ComponentRef<typeof View>>(null);
   const points = useCountUp(summary?.points ?? 0, summary != null, 40);
   const loaded = summary != null;
-  const beatIt = loaded && summary.predicted * 2 < summary.total;
+  const survived = loaded && summary.finished && !summary.over;
 
   useEffect(() => {
-    if (loaded) buzz(beatIt ? "win" : "lose");
-  }, [loaded, beatIt]);
+    if (loaded) buzz(survived ? "win" : "lose");
+  }, [loaded, survived]);
 
   if (!summary) return <Screen>{null}</Screen>;
 
@@ -53,9 +58,19 @@ export default function Result() {
     }
   };
 
+  const headline = summary.over
+    ? "THE SQUID GOT ME IN " +
+      summary.played +
+      (summary.played === 1 ? " ROUND" : " ROUNDS")
+    : survived
+      ? "I SURVIVED WITH " +
+        summary.lives +
+        (summary.lives === 1 ? " LIFE" : " LIVES")
+      : "STILL SWIMMING";
+
   return (
     <Screen>
-      {beatIt && <Confetti />}
+      {survived && <Confetti />}
       <ScrollView contentContainerStyle={styles.scroll}>
         <BackLink onPress={() => router.dismissTo("/unpredictable")} />
         <View
@@ -65,27 +80,28 @@ export default function Result() {
           testID="share-card"
         >
           <PixelBox
-            color={palette.cyan}
-            shadow={palette.cyanDark}
-            fill={palette.deep}
+            color={survived ? palette.green : palette.cyan}
+            fill={WATER_BANDS[4]}
             pad={unit * 5}
           >
             <View style={styles.card}>
               <Display size={8} color={palette.cyan}>
                 {"UNPREDICTABLE · " + summary.day}
               </Display>
-              <Opponent mood={beatIt ? "defeated" : "smug"} scale={7} />
-              <Display size={11} style={styles.centerText}>
-                THE AI PREDICTED ME
-              </Display>
+              <Opponent mood={survived ? "defeated" : "smug"} scale={6} />
               <Display
-                size={56}
-                testID="score"
-                style={[styles.score, { textShadowColor: palette.cyan }]}
+                size={13}
+                color={summary.over ? palette.pink : palette.green}
+                style={styles.headline}
+                testID="headline"
               >
-                {summary.predicted + "/" + summary.total}
+                {headline}
               </Display>
-              <Display size={11}>TODAY</Display>
+              <View style={styles.hearts}>
+                {[0, 1, 2].map((i) => (
+                  <Heart key={i} full={i < summary.lives} scale={4} />
+                ))}
+              </View>
               <View style={styles.marks}>
                 {summary.rounds.map((r) => (
                   <View
@@ -95,17 +111,40 @@ export default function Result() {
                       {
                         backgroundColor: r.outcome
                           ? outcomeColor[r.outcome]
-                          : palette.border,
+                          : palette.panel,
                       },
                     ]}
                   />
                 ))}
               </View>
-              <Body color={palette.gold} size={30} testID="points">
-                {points + " PTS"}
+              <Display
+                size={30}
+                color={palette.gold}
+                testID="points"
+                style={styles.points}
+              >
+                {String(points)}
+              </Display>
+              <Display size={9} color={palette.gold}>
+                POINTS
+              </Display>
+              <Body
+                color={palette.text}
+                size={9}
+                style={styles.centerText}
+                testID="score"
+              >
+                {"outsmarted the squid " +
+                  summary.escaped +
+                  " of " +
+                  summary.played +
+                  " times"}
               </Body>
-              <Body color={palette.dim} size={20}>
+              <Body color={palette.dim} size={9} style={styles.centerText}>
                 {summary.name +
+                  (summary.lifePoints > 0
+                    ? " · +" + summary.lifePoints + " life bonus"
+                    : "") +
                   (summary.bonus > 0
                     ? " · " + summary.bonus + " crowd bonus"
                     : "")}
@@ -117,43 +156,44 @@ export default function Result() {
         <PixelButton label="SHARE CARD" onPress={share} testID="share-button" />
 
         <View style={styles.list}>
-          {summary.rounds.map((r) => (
-            <PixelBox key={r.index} pad={unit * 2.5}>
-              <View style={styles.row}>
-                <View style={styles.rowText}>
-                  <Body color={palette.dim} size={18}>
-                    {r.prompt}
-                  </Body>
-                  <Body size={24}>{r.answer || "..."}</Body>
-                </View>
-                <View style={styles.rowRight}>
-                  <Display
-                    size={9}
-                    color={r.outcome ? outcomeColor[r.outcome] : palette.dim}
-                  >
-                    {r.outcome === "escaped"
-                      ? "+100"
-                      : r.outcome === "predicted"
-                        ? "PREDICTED"
-                        : "VOID"}
-                  </Display>
-                  {r.bonus && (
-                    <Display size={7} color={palette.green}>
-                      +50 CROWD
+          {summary.rounds
+            .filter((r) => r.outcome !== null)
+            .map((r) => (
+              <PixelBox key={r.index} pad={unit * 2.5}>
+                <View style={styles.row}>
+                  <View style={styles.rowText}>
+                    <Body color={palette.dim} size={8}>
+                      {r.prompt}
+                    </Body>
+                    <Body size={11}>{r.answer || "..."}</Body>
+                  </View>
+                  <View style={styles.rowRight}>
+                    <Display
+                      size={9}
+                      color={r.outcome ? outcomeColor[r.outcome] : palette.dim}
+                    >
+                      {r.outcome === "escaped"
+                        ? "+100"
+                        : r.outcome === "predicted"
+                          ? "-1 ♥"
+                          : "VOID"}
                     </Display>
-                  )}
+                    {r.bonus && (
+                      <Display size={7} color={palette.green}>
+                        +50 CROWD
+                      </Display>
+                    )}
+                  </View>
                 </View>
-              </View>
-            </PixelBox>
-          ))}
+              </PixelBox>
+            ))}
         </View>
-        <Body color={palette.dim} size={18} style={styles.centerText}>
+        <Body color={palette.dim} size={8} style={styles.centerText}>
           crowd bonuses keep settling as more people play.
         </Body>
         <PixelButton
           label="LIVE ROOM ▶"
-          color={palette.gold}
-          shadow={palette.goldDark}
+          tone="gold"
           onPress={() => router.push("/unpredictable/live")}
           testID="live-button"
         />
@@ -167,13 +207,26 @@ const styles = StyleSheet.create({
   capture: { backgroundColor: palette.bg, padding: unit },
   card: { alignItems: "center", gap: unit * 3 },
   centerText: { textAlign: "center" },
-  score: {
-    lineHeight: 72,
-    textShadowRadius: 14,
-    textShadowOffset: { width: 0, height: 0 },
+  headline: {
+    textAlign: "center",
+    textShadowColor: palette.ink,
+    textShadowRadius: 0,
+    textShadowOffset: { width: 2, height: 2 },
+  },
+  hearts: { flexDirection: "row", gap: unit * 2 },
+  points: {
+    lineHeight: 40,
+    textShadowColor: palette.goldDark,
+    textShadowRadius: 0,
+    textShadowOffset: { width: 3, height: 3 },
   },
   marks: { flexDirection: "row", gap: unit * 2 },
-  mark: { width: unit * 5, height: unit * 5 },
+  mark: {
+    width: unit * 5,
+    height: unit * 5,
+    borderWidth: 2,
+    borderColor: palette.ink,
+  },
   list: { gap: unit * 2 },
   row: {
     flexDirection: "row",
@@ -181,6 +234,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: unit * 3,
   },
-  rowText: { flex: 1, gap: 2 },
+  rowText: { flex: 1, gap: unit },
   rowRight: { alignItems: "flex-end", gap: unit },
 });

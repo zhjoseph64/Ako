@@ -185,7 +185,7 @@ export const roundCrowd = query({
       .query("unpClusters")
       .withIndex("by_promptId_and_key", (q) => q.eq("promptId", round.promptId))
       .take(500);
-    const mine = clusters.find((c) => c._id === round.clusterId);
+    const mine = await ctx.db.get("unpClusters", round.clusterId);
     if (!mine) return null;
     const total = clusters.reduce((sum, c) => sum + c.humanCount, 0);
     return {
@@ -314,17 +314,24 @@ export const finalizeRound = internalMutation({
       .query("unpClusters")
       .withIndex("by_promptId_and_key", (q) => q.eq("promptId", round.promptId).eq("key", key))
       .first();
-    let clusterId = existing?._id;
-    if (existing) {
-      await ctx.db.patch("unpClusters", existing._id, { humanCount: existing.humanCount + 1 });
-    } else {
-      clusterId = await ctx.db.insert("unpClusters", {
+    const clusterId =
+      existing?._id ??
+      (await ctx.db.insert("unpClusters", {
         promptId: round.promptId,
         key,
         label: args.cluster.toLowerCase(),
-        humanCount: 1,
+        humanCount: 0,
         aiCount: 0,
-      });
+      }));
+    const counted = await ctx.db
+      .query("unpClusterPlayers")
+      .withIndex("by_clusterId_and_playerId", (q) =>
+        q.eq("clusterId", clusterId).eq("playerId", round.playerId),
+      )
+      .first();
+    if (!counted) {
+      await ctx.db.insert("unpClusterPlayers", { clusterId, playerId: round.playerId });
+      await ctx.db.patch("unpClusters", clusterId, { humanCount: (existing?.humanCount ?? 0) + 1 });
     }
     const byCluster = round.guesses.findIndex((g) => clusterKey(g) === key);
     const matchedGuess = args.matchedGuess ?? (byCluster === -1 ? null : byCluster);
@@ -355,8 +362,17 @@ export const devReset = internalMutation({
         .withIndex("by_sessionId_and_index", (q) => q.eq("sessionId", session._id))
         .take(20);
       for (const round of rounds) {
-        const cluster = round.clusterId ? await ctx.db.get("unpClusters", round.clusterId) : null;
-        if (cluster) {
+        const counted = round.clusterId
+          ? await ctx.db
+              .query("unpClusterPlayers")
+              .withIndex("by_clusterId_and_playerId", (q) =>
+                q.eq("clusterId", round.clusterId!).eq("playerId", player._id),
+              )
+              .first()
+          : null;
+        const cluster = counted ? await ctx.db.get("unpClusters", counted.clusterId) : null;
+        if (counted && cluster) {
+          await ctx.db.delete("unpClusterPlayers", counted._id);
           await ctx.db.patch("unpClusters", cluster._id, {
             humanCount: Math.max(0, cluster.humanCount - 1),
           });

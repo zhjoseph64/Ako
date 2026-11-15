@@ -141,12 +141,14 @@ const NON_ANSWERS = new Set(["idk", "dunno", "nothing", "pass", "skip", "na", "n
 
 function stubJudge(answer: string, guesses: string[], clusters: string[]): Verdict {
   const key = clusterKey(answer);
-  if (!/[a-z0-9]/.test(key) || NON_ANSWERS.has(key) || /^(.)\1+$/.test(key.replace(/ /g, ""))) {
-    return { valid: false, reason: "That doesn't really answer the prompt.", matchedGuess: null, cluster: "" };
-  }
   const matched = guesses.findIndex((g) => sameAnswer(g, answer));
   const existing =
     clusters.find((c) => clusterKey(c) === key) ?? clusters.find((c) => sameAnswer(c, answer));
+  const known = matched !== -1 || existing !== undefined;
+  const junk = NON_ANSWERS.has(key) || /^(.)\1+$/.test(key.replace(/ /g, ""));
+  if (!/[a-z0-9]/.test(key) || (junk && !known)) {
+    return { valid: false, reason: "That doesn't really answer the prompt.", matchedGuess: null, cluster: "" };
+  }
   return {
     valid: true,
     reason: "",

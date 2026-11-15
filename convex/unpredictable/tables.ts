@@ -53,4 +53,9 @@ export const unpredictableTables = {
     humanCount: v.number(),
     aiCount: v.number(),
   }).index("by_promptId_and_key", ["promptId", "key"]),
+
+  unpClusterPlayers: defineTable({
+    clusterId: v.id("unpClusters"),
+    playerId: v.id("unpPlayers"),
+  }).index("by_clusterId_and_playerId", ["clusterId", "playerId"]),
 };

@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
+import { Link } from "expo-router";
 import { Button, StyleSheet, Text, View } from "react-native";
 
 import { api } from "../../convex/_generated/api";
@@ -14,6 +15,9 @@ export default function Index() {
         {count === undefined ? "Loading…" : count}
       </Text>
       <Button title="Ping" onPress={() => increment()} />
+      <Link href="/unpredictable" style={styles.link}>
+        Play Unpredictable
+      </Link>
     </View>
   );
 }
@@ -31,5 +35,11 @@ const styles = StyleSheet.create({
   count: {
     fontSize: 64,
     fontWeight: "700",
+  },
+  link: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#6D5BFF",
+    padding: 12,
   },
 });

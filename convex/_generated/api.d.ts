@@ -9,6 +9,11 @@
  */
 
 import type * as counter from "../counter.js";
+import type * as jailbreak_bossAdapters from "../jailbreak/bossAdapters.js";
+import type * as jailbreak_engine from "../jailbreak/engine.js";
+import type * as jailbreak_evaluator from "../jailbreak/evaluator.js";
+import type * as jailbreak_rooms from "../jailbreak/rooms.js";
+import type * as jailbreak_tables from "../jailbreak/tables.js";
 import type * as unpredictable_ai from "../unpredictable/ai.js";
 import type * as unpredictable_crowd from "../unpredictable/crowd.js";
 import type * as unpredictable_game from "../unpredictable/game.js";
@@ -26,6 +31,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   counter: typeof counter;
+  "jailbreak/bossAdapters": typeof jailbreak_bossAdapters;
+  "jailbreak/engine": typeof jailbreak_engine;
+  "jailbreak/evaluator": typeof jailbreak_evaluator;
+  "jailbreak/rooms": typeof jailbreak_rooms;
+  "jailbreak/tables": typeof jailbreak_tables;
   "unpredictable/ai": typeof unpredictable_ai;
   "unpredictable/crowd": typeof unpredictable_crowd;
   "unpredictable/game": typeof unpredictable_game;

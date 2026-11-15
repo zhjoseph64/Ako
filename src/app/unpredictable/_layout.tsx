@@ -6,6 +6,7 @@ import { colors } from "@/unpredictable/theme";
 export default function UnpredictableLayout() {
   return (
     <>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
     </>

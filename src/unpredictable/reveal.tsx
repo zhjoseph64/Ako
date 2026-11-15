@@ -1,18 +1,40 @@
 import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
-import { colors } from "@/unpredictable/theme";
+import { Mood, Opponent } from "@/unpredictable/sprite";
+import { outcomeColor, palette, unit } from "@/unpredictable/theme";
+import {
+  Body,
+  buzz,
+  Confetti,
+  Display,
+  PixelBox,
+  PixelButton,
+  thud,
+  useCountUp,
+} from "@/unpredictable/ui";
 
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+
+type Outcome = "predicted" | "escaped" | "void";
 
 type Props = {
   deviceId: string;
   roundId: Id<"unpRounds">;
   prompt: string;
   answer: string | null;
-  outcome: "predicted" | "escaped" | "void";
+  outcome: Outcome;
   judgeReason: string | null;
   guesses: string[];
   matchedGuess: number | null;
@@ -20,120 +42,234 @@ type Props = {
   usedMemory: boolean;
   last: boolean;
   onNext: () => void;
+  onVerdict: (outcome: Outcome) => void;
 };
 
-const RESULT = {
-  predicted: { title: "PREDICTED", sub: "The AI saw you coming.", color: colors.lose },
-  escaped: { title: "UNPREDICTABLE", sub: "None of its guesses got you.", color: colors.win },
-  void: { title: "VOID", sub: "This round doesn't count.", color: colors.void },
+const VERDICT: Record<Outcome, { title: string; sub: string; mood: Mood }> = {
+  predicted: {
+    title: "PREDICTED",
+    sub: "the AI saw you coming.",
+    mood: "smug",
+  },
+  escaped: {
+    title: "UNPREDICTABLE!",
+    sub: "none of its guesses got you.",
+    mood: "defeated",
+  },
+  void: { title: "VOID", sub: "this round doesn't count.", mood: "idle" },
 };
 
-const FLIP_GAP = 850;
+const FIRST_FLIP = 600;
+const FLIP_GAP = 900;
+const FLIP_MS = 380;
+
+function GuessCard(props: { index: number; guess: string; hit: boolean }) {
+  const flip = useSharedValue(0);
+  useEffect(() => {
+    const delay = FIRST_FLIP + props.index * FLIP_GAP;
+    flip.value = withDelay(
+      delay,
+      withTiming(1, { duration: FLIP_MS, easing: Easing.steps(6) }),
+    );
+    const timer = setTimeout(thud, delay + FLIP_MS / 2);
+    return () => clearTimeout(timer);
+  }, [flip, props.index]);
+  const front = useAnimatedStyle(() => ({
+    opacity: flip.value < 0.5 ? 1 : 0,
+    transform: [{ scaleY: Math.max(0.05, 1 - flip.value * 2) }],
+  }));
+  const back = useAnimatedStyle(() => ({
+    opacity: flip.value < 0.5 ? 0 : 1,
+    transform: [{ scaleY: Math.max(0.05, flip.value * 2 - 1) }],
+  }));
+  return (
+    <View style={styles.slot}>
+      <Animated.View style={[StyleSheet.absoluteFill, front]}>
+        <PixelBox fill={palette.panelHi} style={styles.card}>
+          <Body color={palette.dim} size={24}>
+            {"▓▓ SEALED GUESS " + (props.index + 1) + " ▓▓"}
+          </Body>
+        </PixelBox>
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, back]}>
+        <PixelBox
+          color={props.hit ? palette.pink : palette.border}
+          fill={props.hit ? "#2a1024" : palette.panel}
+          shadow={props.hit ? palette.pinkDark : palette.shadow}
+          style={styles.card}
+        >
+          <Body
+            size={28}
+            color={props.hit ? palette.pink : palette.text}
+            style={styles.guess}
+            numberOfLines={1}
+          >
+            {props.guess}
+          </Body>
+          {props.hit && (
+            <Display size={8} color={palette.pink}>
+              GOT YOU
+            </Display>
+          )}
+        </PixelBox>
+      </Animated.View>
+    </View>
+  );
+}
 
 export function Reveal(props: Props) {
   const crowd = useQuery(api.unpredictable.game.roundCrowd, {
     deviceId: props.deviceId,
     roundId: props.roundId,
   });
-  const [flips] = useState(() => props.guesses.map(() => new Animated.Value(0)));
-  const [result] = useState(() => new Animated.Value(0));
-  const [after] = useState(() => new Animated.Value(0));
+  const [shown, setShown] = useState(false);
+  const slam = useSharedValue(0);
+  const after = useSharedValue(0);
+  const bonus = useSharedValue(0);
+  const { outcome, onVerdict } = props;
+  const verdictAt = FIRST_FLIP + props.guesses.length * FLIP_GAP + 150;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.delay(500),
-      Animated.stagger(
-        FLIP_GAP,
-        flips.map((flip) =>
-          Animated.timing(flip, {
-            toValue: 1,
-            duration: 520,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ),
+    slam.value = withDelay(
+      verdictAt,
+      withSequence(
+        withTiming(1.25, { duration: 90, easing: Easing.steps(2) }),
+        withTiming(1, { duration: 120, easing: Easing.steps(2) }),
       ),
-      Animated.delay(250),
-      Animated.spring(result, { toValue: 1, friction: 5, tension: 90, useNativeDriver: true }),
-      Animated.timing(after, { toValue: 1, duration: 400, useNativeDriver: true }),
-    ]).start();
-  }, [flips, result, after]);
+    );
+    after.value = withDelay(
+      verdictAt + 450,
+      withTiming(1, { duration: 250, easing: Easing.steps(4) }),
+    );
+    const timer = setTimeout(() => {
+      setShown(true);
+      buzz(
+        outcome === "escaped"
+          ? "win"
+          : outcome === "predicted"
+            ? "lose"
+            : "void",
+      );
+      onVerdict(outcome);
+    }, verdictAt);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const verdict = RESULT[props.outcome];
+  const hasBonus = crowd?.bonus === true;
+  useEffect(() => {
+    if (shown && hasBonus) {
+      bonus.value = withDelay(
+        900,
+        withSpring(1, { damping: 6, stiffness: 220 }),
+      );
+    }
+  }, [shown, hasBonus, bonus]);
+
+  const points = useCountUp(outcome === "escaped" ? 100 : 0, shown);
+  const slamStyle = useAnimatedStyle(() => ({
+    opacity: slam.value === 0 ? 0 : 1,
+    transform: [{ scale: slam.value === 0 ? 3 : slam.value }],
+  }));
+  const afterStyle = useAnimatedStyle(() => ({
+    opacity: after.value,
+    transform: [{ translateY: (1 - after.value) * 16 }],
+  }));
+  const bonusStyle = useAnimatedStyle(() => ({
+    opacity: bonus.value === 0 ? 0 : 1,
+    transform: [{ scale: bonus.value }],
+  }));
+
+  const verdict = VERDICT[outcome];
+  const color = outcomeColor[outcome];
 
   return (
     <View style={styles.wrap}>
+      {shown && outcome === "escaped" && <Confetti />}
       <View style={styles.top}>
-        <Text style={styles.prompt}>{props.prompt}</Text>
-        <Text style={styles.answer} testID="your-answer">
-          {props.answer ? `“${props.answer}”` : "No answer"}
-        </Text>
+        <Body color={palette.dim} size={22}>
+          {props.prompt}
+        </Body>
+        <Body
+          size={36}
+          color={palette.text}
+          testID="your-answer"
+          numberOfLines={1}
+        >
+          {props.answer ? "> " + props.answer : "> ..."}
+        </Body>
       </View>
 
       <View style={styles.cards}>
-        <Text style={styles.section}>THE AI&apos;S SEALED GUESSES</Text>
-        {props.guesses.map((guess, i) => {
-          const hit = props.matchedGuess === i;
-          const frontRotate = flips[i].interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
-          const backRotate = flips[i].interpolate({ inputRange: [0, 1], outputRange: ["180deg", "360deg"] });
-          return (
-            <View key={i} style={styles.cardSlot}>
-              <Animated.View
-                style={[styles.card, styles.cardFront, { transform: [{ perspective: 800 }, { rotateX: frontRotate }] }]}
-              >
-                <Text style={styles.lock}>🔒  Guess {i + 1}</Text>
-              </Animated.View>
-              <Animated.View
-                style={[
-                  styles.card,
-                  styles.cardBack,
-                  hit && styles.cardHit,
-                  { transform: [{ perspective: 800 }, { rotateX: backRotate }] },
-                ]}
-              >
-                <Text style={[styles.guess, hit && styles.guessHit]}>{guess}</Text>
-                {hit && <Text style={styles.hitTag}>GOT YOU</Text>}
-              </Animated.View>
-            </View>
-          );
-        })}
+        {props.guesses.map((guess, i) => (
+          <GuessCard
+            key={i}
+            index={i}
+            guess={guess}
+            hit={props.matchedGuess === i}
+          />
+        ))}
       </View>
 
-      <Animated.View
-        style={[
-          styles.result,
-          {
-            opacity: result,
-            transform: [{ scale: result.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
-          },
-        ]}
-      >
-        <Text style={[styles.resultTitle, { color: verdict.color }]} testID="round-result">
+      <Animated.View style={[styles.verdict, slamStyle]}>
+        <Display
+          size={outcome === "escaped" ? 17 : 22}
+          color={color}
+          testID="round-result"
+          style={[styles.glow, { textShadowColor: color }]}
+        >
           {verdict.title}
-        </Text>
-        <Text style={styles.resultSub}>
-          {props.outcome === "void" && props.judgeReason ? props.judgeReason : verdict.sub}
-        </Text>
+        </Display>
+        <Body color={palette.dim} size={22} style={styles.center}>
+          {outcome === "void" && props.judgeReason
+            ? props.judgeReason.toLowerCase()
+            : verdict.sub}
+        </Body>
+        {outcome === "escaped" && (
+          <Display size={14} color={palette.gold} testID="points">
+            {"+" + points}
+          </Display>
+        )}
       </Animated.View>
 
-      <Animated.View style={[styles.after, { opacity: after }]}>
-        <View style={styles.reasonBox}>
-          <Text style={styles.reasonLabel}>{props.usedMemory ? "🧠 AI, FROM MEMORY" : "🤖 AI"}</Text>
-          <Text style={styles.reason}>{props.reason}</Text>
+      <Animated.View style={[styles.after, afterStyle]}>
+        <View style={styles.speech}>
+          <Opponent mood={shown ? verdict.mood : "thinking"} scale={5} />
+          <View style={styles.bubble}>
+            <PixelBox pad={unit * 2}>
+              <Display size={7} color={palette.gold}>
+                {props.usedMemory ? "AI · FROM MEMORY" : "AI"}
+              </Display>
+              <Body size={21}>{props.reason}</Body>
+            </PixelBox>
+          </View>
         </View>
         {crowd && (
           <View style={styles.crowdRow}>
-            <Text style={styles.crowd} testID="crowd-stat">
+            <Body
+              color={palette.cyan}
+              size={22}
+              style={styles.center}
+              testID="crowd-stat"
+            >
               {crowd.total <= 1
-                ? "You're the first human to say this."
-                : `You're one of ${crowd.percent}% who said “${crowd.label}”`}
-            </Text>
-            {crowd.bonus && <Text style={styles.bonus}>+50 crowd bonus</Text>}
+                ? "you're the first human to say this."
+                : `you're one of ${crowd.percent}% who said "${crowd.label}"`}
+            </Body>
+            {hasBonus && (
+              <Animated.View style={[styles.bonus, bonusStyle]}>
+                <Display size={8} color={palette.bg}>
+                  +50 CROWD BONUS
+                </Display>
+              </Animated.View>
+            )}
           </View>
         )}
-        <Pressable style={styles.next} onPress={props.onNext} testID="next-button">
-          <Text style={styles.nextText}>{props.last ? "See my score" : "Next prompt"}</Text>
-        </Pressable>
+        <PixelButton
+          testID="next-button"
+          label={props.last ? "SEE MY SCORE ▶" : "NEXT PROMPT ▶"}
+          onPress={props.onNext}
+        />
       </Animated.View>
     </View>
   );
@@ -141,52 +277,30 @@ export function Reveal(props: Props) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: "space-between" },
-  top: { gap: 6, marginTop: 8 },
-  prompt: { color: colors.dim, fontSize: 16, fontWeight: "600" },
-  answer: { color: colors.text, fontSize: 30, fontWeight: "800" },
-  section: { color: colors.dim, fontSize: 11, fontWeight: "700", letterSpacing: 1.5, marginBottom: 2 },
-  cards: { gap: 10 },
-  cardSlot: { height: 62 },
+  top: { gap: unit },
+  cards: { gap: unit * 3 },
+  slot: { height: 60 },
   card: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 18,
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backfaceVisibility: "hidden",
   },
-  cardFront: { backgroundColor: colors.cardHi, borderColor: colors.border },
-  cardBack: { backgroundColor: colors.card, borderColor: colors.border },
-  cardHit: { backgroundColor: "#3A1522", borderColor: colors.lose },
-  lock: { color: colors.dim, fontSize: 16, fontWeight: "700" },
-  guess: { color: colors.text, fontSize: 20, fontWeight: "700", flexShrink: 1 },
-  guessHit: { color: colors.lose },
-  hitTag: { color: colors.lose, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  result: { alignItems: "center", gap: 4 },
-  resultTitle: { fontSize: 34, fontWeight: "900", letterSpacing: 1 },
-  resultSub: { color: colors.dim, fontSize: 15, textAlign: "center" },
-  after: { gap: 12 },
-  reasonBox: { backgroundColor: colors.card, borderRadius: 14, padding: 14, gap: 4 },
-  reasonLabel: { color: colors.ai, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  reason: { color: colors.text, fontSize: 15, lineHeight: 21 },
-  crowdRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" },
-  crowd: { color: colors.accent, fontSize: 15, fontWeight: "700", textAlign: "center" },
+  guess: { flexShrink: 1 },
+  verdict: { alignItems: "center", gap: unit * 2 },
+  glow: {
+    textAlign: "center",
+    textShadowRadius: 10,
+    textShadowOffset: { width: 0, height: 0 },
+  },
+  center: { textAlign: "center" },
+  after: { gap: unit * 3 },
+  speech: { flexDirection: "row", alignItems: "center", gap: unit * 3 },
+  bubble: { flex: 1 },
+  crowdRow: { alignItems: "center", gap: unit * 2 },
   bonus: {
-    color: "#0B0B12",
-    backgroundColor: colors.win,
-    borderRadius: 8,
-    overflow: "hidden",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    fontSize: 12,
-    fontWeight: "800",
+    backgroundColor: palette.green,
+    paddingHorizontal: unit * 2,
+    paddingVertical: unit * 1.5,
   },
-  next: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 16, alignItems: "center" },
-  nextText: { color: "#0B0B12", fontSize: 18, fontWeight: "800" },
 });

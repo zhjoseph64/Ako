@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation, internalQuery, query } from "../_generated/server";
 import { PROMPT_SETS } from "./seed";
-import { clusterKey, dayInfo } from "./text";
+import { clusterKey, dayInfo, sameAnswer } from "./text";
 
 export const prompts = query({
   args: { now: v.number() },
@@ -53,8 +53,13 @@ export const storeSamples = internalMutation({
       .take(500);
     const counts = new Map<string, { label: string; count: number }>();
     for (const answer of args.answers) {
-      const key = clusterKey(answer);
-      if (!key) continue;
+      const exact = clusterKey(answer);
+      if (!exact) continue;
+      const key =
+        clusters.find((c) => c.key === exact)?.key ??
+        clusters.find((c) => sameAnswer(c.label, answer))?.key ??
+        [...counts.entries()].find(([, entry]) => sameAnswer(entry.label, answer))?.[0] ??
+        exact;
       const entry = counts.get(key) ?? { label: answer.toLowerCase(), count: 0 };
       entry.count++;
       counts.set(key, entry);

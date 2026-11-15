@@ -1,21 +1,36 @@
 import { useMutation, useQuery } from "convex/react";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useDeviceId } from "@/unpredictable/device";
-import { colors } from "@/unpredictable/theme";
+import { Opponent } from "@/unpredictable/sprite";
+import { fonts, palette, unit } from "@/unpredictable/theme";
+import {
+  BackLink,
+  Blink,
+  Body,
+  Display,
+  PixelBox,
+  PixelButton,
+  Screen,
+} from "@/unpredictable/ui";
 
 import { api } from "../../../convex/_generated/api";
+
+const RULES = [
+  "6 prompts a day. same for everyone.",
+  "the AI seals 3 guesses before you see one.",
+  "15 seconds. one to four words.",
+  "say what it didn't see coming.",
+];
 
 export default function UnpredictableHome() {
   const router = useRouter();
@@ -46,106 +61,96 @@ export default function UnpredictableHome() {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen>
       <KeyboardAvoidingView
         style={styles.inner}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <BackLink onPress={() => router.back()} />
         <View style={styles.hero}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            testID="back-button"
-          >
-            <Text style={styles.back}>‹ Back</Text>
-          </Pressable>
-          <Text style={styles.kicker}>DAILY · 6 PROMPTS · 15 SECONDS EACH</Text>
-          <Text style={styles.title}>Unpredictable</Text>
-          <Text style={styles.body}>
-            The AI seals three guesses for every prompt before you see it. Say
-            something it didn&apos;t see coming.
-          </Text>
+          <Opponent mood="idle" scale={9} />
+          <Display size={20} style={styles.title}>
+            UNPREDICTABLE
+          </Display>
+          <Display size={9} color={palette.cyan} style={styles.sub}>
+            THE DAILY DUEL
+          </Display>
         </View>
+        <PixelBox>
+          <Body color={palette.cyan} size={20}>
+            how to play
+          </Body>
+          {RULES.map((rule) => (
+            <Body key={rule} color={palette.dim} size={21}>
+              {"· " + rule}
+            </Body>
+          ))}
+        </PixelBox>
         <View style={styles.form}>
-          <Text style={styles.label}>Your name</Text>
-          <TextInput
-            testID="name-input"
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Display name"
-            placeholderTextColor={colors.dim}
-            maxLength={20}
-            autoCorrect={false}
-            returnKeyType="go"
-            onSubmitEditing={() => ready && play()}
-          />
-          <Pressable
+          <PixelBox pad={0} color={palette.cyan}>
+            <TextInput
+              testID="name-input"
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="YOUR NAME"
+              placeholderTextColor={palette.dim}
+              maxLength={20}
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={() => ready && play()}
+            />
+          </PixelBox>
+          <PixelButton
             testID="play-button"
-            style={[styles.button, !ready && styles.buttonOff]}
+            label={busy ? "LOADING..." : "▼ START DUEL ▼"}
             disabled={!ready}
             onPress={play}
+          />
+          <Pressable
+            testID="live-link"
+            accessibilityRole="link"
+            accessibilityLabel="Live room"
+            style={styles.liveRow}
+            onPress={() => router.push("/unpredictable/live")}
           >
-            <Text style={styles.buttonText}>
-              {busy ? "Starting…" : "Play today"}
-            </Text>
+            <Blink>
+              <View style={styles.liveDot} />
+            </Blink>
+            <Body color={palette.text} size={24} style={styles.underline}>
+              LIVE ROOM
+            </Body>
           </Pressable>
-          <Link href="/unpredictable/live" style={styles.link}>
-            Live crowd view
-          </Link>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: 24 },
-  inner: { flex: 1, justifyContent: "space-between" },
-  back: {
-    color: colors.dim,
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 28,
-  },
-  hero: { gap: 12 },
-  kicker: {
-    color: colors.accent,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
+  inner: { flex: 1, padding: unit * 5, justifyContent: "space-between" },
+  hero: { alignItems: "center", gap: unit * 3 },
   title: {
-    color: colors.text,
-    fontSize: 44,
-    fontWeight: "800",
-    letterSpacing: -1,
-  },
-  body: { color: colors.dim, fontSize: 17, lineHeight: 24 },
-  form: { gap: 12, marginBottom: 24 },
-  label: { color: colors.dim, fontSize: 13, fontWeight: "600" },
-  input: {
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 14,
-    color: colors.text,
-    fontSize: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  button: {
-    backgroundColor: colors.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  buttonOff: { opacity: 0.4 },
-  buttonText: { color: "#0B0B12", fontSize: 18, fontWeight: "800" },
-  link: {
-    color: colors.dim,
-    fontSize: 15,
     textAlign: "center",
-    paddingVertical: 12,
+    textShadowColor: palette.cyan,
+    textShadowRadius: 12,
+    textShadowOffset: { width: 0, height: 0 },
   },
+  sub: { letterSpacing: 4 },
+  form: { gap: unit * 3 },
+  input: {
+    fontFamily: fonts.body,
+    fontSize: 28,
+    color: palette.text,
+    paddingHorizontal: unit * 3,
+    paddingVertical: unit * 3,
+  },
+  liveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: unit * 2,
+  },
+  liveDot: { width: unit * 2, height: unit * 2, backgroundColor: palette.pink },
+  underline: { textDecorationLine: "underline" },
 });

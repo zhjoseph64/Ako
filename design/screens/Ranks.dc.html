@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rank ladder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+a{color:#D9CCFF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit}
+.bglow{animation:bpulse 2.8s ease-in-out infinite}
+@keyframes bpulse{0%,100%{opacity:.3}50%{opacity:.75}}
+</style>
+</helmet>
+<div style="width:390px;height:1300px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;display:flex;flex-direction:column;overflow:hidden">
+
+  <header style="display:flex;align-items:center;gap:4px;padding:54px 12px 0">
+    <a href="Profile.dc.html" aria-label="Back to profile" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#F5F3FB">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+  </header>
+
+  <section style="padding:4px 20px 0;display:flex;flex-direction:column;gap:6px">
+    <h1 style="margin:0;font-family:'Space Grotesk', Inter, sans-serif;font-size:32px;font-weight:700;letter-spacing:-0.6px">Ranks</h1>
+    <p style="margin:0;font-size:15px;line-height:1.45;color:#BDB9D0">Climb by fooling the AI and getting your labels verified. Every tier multiplies the points you earn per round.</p>
+  </section>
+
+  <ul style="list-style:none;margin:18px 0 0;padding:0 20px;display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{tiers}}" as="t" hint-placeholder-count="8">
+      <li style="{{t.card}}">
+        <button type="button" onClick="{{t.pick}}" aria-expanded="{{t.expanded}}" style="width:100%;border:0;background:transparent;color:#F5F3FB;padding:8px 12px 8px 6px;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left;min-height:64px">
+          <dc-import name="Badge" tier="{{t.id}}" division="{{t.shownDiv}}" size="{{ 58 }}" glow="{{t.isYou}}" hint-size="58px,58px"></dc-import>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:17px;font-weight:600">{{t.label}}</span>
+              <sc-if value="{{t.isYou}}" hint-placeholder-val="{{ false }}">
+                <span style="padding:3px 8px;border-radius:999px;background:#D9CCFF;color:#141120;font-size:11px;font-weight:700;letter-spacing:0.3px">YOU</span>
+              </sc-if>
+            </div>
+            <span style="font-size:13px;color:#A7A3BC;font-variant-numeric:tabular-nums">{{t.range}}</span>
+          </div>
+          <span style="{{t.pill}}">{{t.mult}}</span>
+        </button>
+        <sc-if value="{{t.expanded}}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:4px 12px 14px">
+            <sc-for list="{{t.divs}}" as="d" hint-placeholder-count="3">
+              <div style="{{d.box}}">
+                <dc-import name="Badge" tier="{{t.id}}" division="{{d.n}}" size="{{ 72 }}" hint-size="72px,72px"></dc-import>
+                <span style="font-size:13px;font-weight:600">{{d.name}}</span>
+                <span style="font-size:11.5px;color:#A7A3BC;font-variant-numeric:tabular-nums">{{d.from}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </li>
+    </sc-for>
+  </ul>
+
+  <section aria-label="How points work" style="margin:18px 20px 0;padding:16px;border-radius:20px;background:#15151F;display:flex;flex-direction:column;gap:10px">
+    <h2 style="margin:0;font-size:15px;font-weight:700">How points turn into money</h2>
+    <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:#BDB9D0">Base points per round</span><span style="font-weight:600">up to 600</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:#BDB9D0">Your multiplier (Variant)</span><span style="font-weight:600;color:#D9CCFF">× 1.4</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding-top:10px;border-top:1px solid #23233A"><span style="color:#BDB9D0">Cash value</span><span style="font-weight:700;color:#79E2D6">100 pts = $1.00</span></div>
+  </section>
+
+  <div style="flex:1"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { open: 'variant' };
+  }
+  renderVals() {
+    var self = this;
+    var you = 'variant';
+    var list = [
+      { id: 'singular', label: 'Singular', range: 'Top 500 players', mult: '3.0x', starts: [3500, 3500, 3500] },
+      { id: 'paradox', label: 'Paradox', range: '3,000 – 3,499', mult: '2.2x', starts: [3000, 3167, 3334] },
+      { id: 'anomaly', label: 'Anomaly', range: '2,500 – 2,999', mult: '1.85x', starts: [2500, 2667, 2834] },
+      { id: 'outlier', label: 'Outlier', range: '2,000 – 2,499', mult: '1.6x', starts: [2000, 2167, 2334] },
+      { id: 'variant', label: 'Variant', range: '1,500 – 1,999', mult: '1.4x', starts: [1500, 1667, 1834] },
+      { id: 'signal', label: 'Signal', range: '1,000 – 1,499', mult: '1.25x', starts: [1000, 1167, 1334] },
+      { id: 'pattern', label: 'Pattern', range: '500 – 999', mult: '1.1x', starts: [500, 667, 834] },
+      { id: 'echo', label: 'Echo', range: '0 – 499', mult: '1.0x', starts: [0, 167, 334] }
+    ];
+    var tiers = list.map(function (t) {
+      var isYou = t.id === you;
+      var open = self.state.open === t.id;
+      return {
+        id: t.id, label: t.label, range: t.range, mult: t.mult,
+        isYou: isYou,
+        expanded: open,
+        shownDiv: isYou ? 2 : 3,
+        pick: function () { self.setState({ open: open ? null : t.id }); },
+        card: 'border-radius:20px;overflow:hidden;' + (isYou ? 'background:#1A1930;border:1px solid #4A4380' : 'background:#13131D;border:1px solid #1E1E2E'),
+        pill: 'padding:6px 10px;border-radius:999px;font-size:13px;font-weight:700;' + (isYou ? 'background:#D9CCFF;color:#141120' : 'background:#23233A;color:#E6E2F5'),
+        divs: [1, 2, 3].map(function (n) {
+          var mine = isYou && n === 2;
+          return {
+            n: n,
+            name: t.label + ' ' + n,
+            from: t.id === 'singular' ? 'Top 500' : 'from ' + t.starts[n - 1].toLocaleString('en-US'),
+            box: 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:16px;' + (mine ? 'background:#26244A;border:1px solid #8E9BF0' : 'background:#0F0F18;border:1px solid #1E1E2E')
+          };
+        })
+      };
+    });
+    return { tiers: tiers };
+  }
+}
+</script>
+</body>
+</html>

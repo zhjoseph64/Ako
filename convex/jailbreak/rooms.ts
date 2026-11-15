@@ -3,13 +3,15 @@ import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { mutation, query, type MutationCtx } from "../_generated/server";
 import schema from "../schema";
-import { winCheckType } from "./tables";
 import { adapterLabel, readModelSettings } from "./bossAdapters";
 import { compileWinRegex } from "./evaluator";
+import { canonicalRoomCode } from "./roomCode";
+import { winCheckType } from "./tables";
 
 export const START_RING = 2;
+export const PENDING_TIMEOUT_MS = 60_000;
 const MAX_PLAYERS = 8;
-const PENDING_TIMEOUT_MS = 60_000;
+const ACTIVE_MS = 90_000;
 
 const DEFAULT_BOSS = {
   bossName: "Ignaroth the Blue-Sworn",
@@ -21,24 +23,67 @@ const DEFAULT_BOSS = {
   winCheck: "RED",
 };
 
-function cleanCode(code: string) {
-  const cleaned = code.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 16);
+const credentials = { playerId: v.string(), secret: v.string() };
+
+const publicPlayer = v.object({
+  _id: v.id("jbPlayers"),
+  _creationTime: v.number(),
+  roomId: v.id("jbRooms"),
+  playerId: v.string(),
+  name: v.string(),
+  ring: v.number(),
+  slot: v.number(),
+  chatEpoch: v.number(),
+  lastSeen: v.number(),
+});
+
+function requireCode(code: string) {
+  const cleaned = canonicalRoomCode(code);
   if (!cleaned) throw new Error("Room code is required");
   return cleaned;
 }
 
-async function getPlayer(ctx: MutationCtx, roomId: Id<"jbRooms">, playerId: string) {
-  return await ctx.db
+async function requirePlayer(
+  ctx: MutationCtx,
+  roomId: Id<"jbRooms">,
+  { playerId, secret }: { playerId: string; secret: string },
+) {
+  const player = await ctx.db
     .query("jbPlayers")
     .withIndex("by_roomId_and_playerId", (q) => q.eq("roomId", roomId).eq("playerId", playerId))
     .unique();
+  if (!player) throw new Error("Join the room first");
+  if (player.secret !== secret) throw new Error("This knight belongs to another device");
+  return player;
 }
 
-async function requireHost(ctx: MutationCtx, roomId: Id<"jbRooms">, playerId: string) {
+async function requireHost(ctx: MutationCtx, roomId: Id<"jbRooms">, who: { playerId: string; secret: string }) {
   const room = await ctx.db.get("jbRooms", roomId);
   if (!room) throw new Error("Room not found");
-  if (room.hostId !== playerId) throw new Error("Only the host can change the boss");
+  const player = await requirePlayer(ctx, roomId, who);
+  if (room.hostId !== player.playerId) throw new Error("Only the host can change the boss");
   return room;
+}
+
+async function claimSlot(ctx: MutationCtx, roomId: Id<"jbRooms">, player: Doc<"jbPlayers"> | null) {
+  const cutoff = Date.now() - ACTIVE_MS;
+  const players = await ctx.db
+    .query("jbPlayers")
+    .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+    .take(100);
+  const taken = new Set(
+    players.filter((p) => p.lastSeen > cutoff && p._id !== player?._id).map((p) => p.slot),
+  );
+  if (player && !taken.has(player.slot)) return player.slot;
+  const slot = [...Array(MAX_PLAYERS).keys()].find((s) => !taken.has(s));
+  if (slot === undefined) throw new Error("This arena is full (8 knights)");
+  return slot;
+}
+
+async function markActive(ctx: MutationCtx, player: Doc<"jbPlayers">, extra: Partial<Doc<"jbPlayers">> = {}) {
+  const wasInactive = Date.now() - player.lastSeen > ACTIVE_MS;
+  const slot = wasInactive ? await claimSlot(ctx, player.roomId, player) : player.slot;
+  await ctx.db.patch("jbPlayers", player._id, { ...extra, slot, lastSeen: Date.now() });
 }
 
 async function startNewRound(ctx: MutationCtx, room: Doc<"jbRooms">) {
@@ -56,10 +101,10 @@ async function startNewRound(ctx: MutationCtx, room: Doc<"jbRooms">) {
 }
 
 export const joinRoom = mutation({
-  args: { code: v.string(), playerId: v.string(), name: v.optional(v.string()) },
+  args: { code: v.string(), ...credentials, name: v.optional(v.string()) },
   returns: v.object({ roomId: v.id("jbRooms"), code: v.string() }),
   handler: async (ctx, args) => {
-    const code = cleanCode(args.code);
+    const code = requireCode(args.code);
     const name = args.name?.trim().slice(0, 16);
     let room = await ctx.db
       .query("jbRooms")
@@ -75,25 +120,24 @@ export const joinRoom = mutation({
       });
       room = (await ctx.db.get("jbRooms", roomId))!;
     }
-    const existing = await getPlayer(ctx, room._id, args.playerId);
+    const existing = await ctx.db
+      .query("jbPlayers")
+      .withIndex("by_roomId_and_playerId", (q) => q.eq("roomId", room._id).eq("playerId", args.playerId))
+      .unique();
     if (existing) {
-      await ctx.db.patch("jbPlayers", existing._id, { name: name || existing.name, lastSeen: Date.now() });
+      if (existing.secret !== undefined && existing.secret !== args.secret) {
+        throw new Error("This knight belongs to another device");
+      }
+      await markActive(ctx, existing, { name: name || existing.name, secret: args.secret });
       return { roomId: room._id, code };
     }
-    const players = await ctx.db
-      .query("jbPlayers")
-      .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
-      .take(100);
-    const activeCutoff = Date.now() - 90_000;
-    const takenSlots = new Set(players.filter((p) => p.lastSeen > activeCutoff).map((p) => p.slot));
-    const slot = [...Array(MAX_PLAYERS).keys()].find((s) => !takenSlots.has(s));
-    if (slot === undefined) throw new Error("This arena is full (8 knights)");
     await ctx.db.insert("jbPlayers", {
       roomId: room._id,
       playerId: args.playerId,
+      secret: args.secret,
       name: name || "Knight",
       ring: START_RING,
-      slot,
+      slot: await claimSlot(ctx, room._id, null),
       chatEpoch: 0,
       lastSeen: Date.now(),
     });
@@ -107,21 +151,25 @@ export const getRoom = query({
     v.null(),
     v.object({
       room: schema.doc("jbRooms"),
-      players: v.array(schema.doc("jbPlayers")),
+      players: v.array(publicPlayer),
       adapter: v.object({ kind: v.union(v.literal("model"), v.literal("toy")), label: v.string() }),
     }),
   ),
   handler: async (ctx, args) => {
     const room = await ctx.db
       .query("jbRooms")
-      .withIndex("by_code", (q) => q.eq("code", args.code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("code", canonicalRoomCode(args.code)))
       .unique();
     if (!room) return null;
     const players = await ctx.db
       .query("jbPlayers")
       .withIndex("by_roomId", (q) => q.eq("roomId", room._id))
       .take(100);
-    return { room, players, adapter: adapterLabel(readModelSettings()) };
+    return {
+      room,
+      players: players.map(({ secret: _secret, ...player }) => player),
+      adapter: adapterLabel(readModelSettings()),
+    };
   },
 });
 
@@ -142,87 +190,75 @@ export const ledger = query({
   args: { roomId: v.id("jbRooms"), playerId: v.string() },
   returns: v.array(schema.doc("jbAttacks")),
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("jbAttacks")
-      .withIndex("by_roomId_and_playerId", (q) =>
-        q.eq("roomId", args.roomId).eq("playerId", args.playerId),
-      )
-      .take(500);
-  },
-});
-
-export const heartbeat = mutation({
-  args: { roomId: v.id("jbRooms"), playerId: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const player = await getPlayer(ctx, args.roomId, args.playerId);
-    if (player) await ctx.db.patch("jbPlayers", player._id, { lastSeen: Date.now() });
-    return null;
-  },
-});
-
-export const submitAttack = mutation({
-  args: {
-    roomId: v.id("jbRooms"),
-    playerId: v.string(),
-    clientAttackId: v.string(),
-    prompt: v.string(),
-  },
-  returns: v.id("jbAttacks"),
-  handler: async (ctx, args) => {
-    const duplicate = await ctx.db
-      .query("jbAttacks")
-      .withIndex("by_playerId_and_clientAttackId", (q) =>
-        q.eq("playerId", args.playerId).eq("clientAttackId", args.clientAttackId),
-      )
-      .unique();
-    if (duplicate) return duplicate._id;
-
-    const prompt = args.prompt.trim().slice(0, 1000);
-    if (!prompt) throw new Error("Type a prompt first");
-    const room = await ctx.db.get("jbRooms", args.roomId);
-    if (!room) throw new Error("Room not found");
-    if (room.status === "defeated") throw new Error("The boss is already defeated");
-    const player = await getPlayer(ctx, args.roomId, args.playerId);
-    if (!player) throw new Error("Join the room first");
-
-    const lastAttack = await ctx.db
+    const latest = await ctx.db
       .query("jbAttacks")
       .withIndex("by_roomId_and_playerId", (q) =>
         q.eq("roomId", args.roomId).eq("playerId", args.playerId),
       )
       .order("desc")
+      .take(300);
+    return latest.reverse();
+  },
+});
+
+export const heartbeat = mutation({
+  args: { roomId: v.id("jbRooms"), ...credentials },
+  returns: v.null(),
+  handler: async (ctx, { roomId, ...who }) => {
+    await markActive(ctx, await requirePlayer(ctx, roomId, who));
+    return null;
+  },
+});
+
+export const submitAttack = mutation({
+  args: { roomId: v.id("jbRooms"), ...credentials, clientAttackId: v.string(), prompt: v.string() },
+  returns: v.id("jbAttacks"),
+  handler: async (ctx, { roomId, clientAttackId, prompt: rawPrompt, ...who }) => {
+    const player = await requirePlayer(ctx, roomId, who);
+    const duplicate = await ctx.db
+      .query("jbAttacks")
+      .withIndex("by_playerId_and_clientAttackId", (q) =>
+        q.eq("playerId", player.playerId).eq("clientAttackId", clientAttackId),
+      )
+      .unique();
+    if (duplicate) return duplicate._id;
+
+    const prompt = rawPrompt.trim().slice(0, 1000);
+    if (!prompt) throw new Error("Type a prompt first");
+    const room = await ctx.db.get("jbRooms", roomId);
+    if (!room) throw new Error("Room not found");
+    if (room.status === "defeated") throw new Error("The boss is already defeated");
+
+    const lastAttack = await ctx.db
+      .query("jbAttacks")
+      .withIndex("by_roomId_and_playerId", (q) => q.eq("roomId", roomId).eq("playerId", player.playerId))
+      .order("desc")
       .first();
-    if (
-      lastAttack?.status === "pending" &&
-      Date.now() - lastAttack._creationTime < PENDING_TIMEOUT_MS
-    ) {
-      throw new Error("Your last attack is still in flight");
-    }
+    if (lastAttack?.status === "pending") throw new Error("Your last attack is still in flight");
 
     const attackId = await ctx.db.insert("jbAttacks", {
-      roomId: args.roomId,
-      playerId: args.playerId,
+      roomId,
+      playerId: player.playerId,
       playerName: player.name,
-      clientAttackId: args.clientAttackId,
+      clientAttackId,
       prompt,
       round: room.round,
       chatEpoch: player.chatEpoch,
       status: "pending",
       ringBefore: player.ring,
     });
-    await ctx.db.patch("jbPlayers", player._id, { lastSeen: Date.now() });
+    await markActive(ctx, player);
     await ctx.scheduler.runAfter(0, internal.jailbreak.engine.runAttack, { attackId });
+    await ctx.scheduler.runAfter(PENDING_TIMEOUT_MS, internal.jailbreak.engine.expireAttack, { attackId });
     return attackId;
   },
 });
 
 export const resetChat = mutation({
-  args: { roomId: v.id("jbRooms"), playerId: v.string() },
+  args: { roomId: v.id("jbRooms"), ...credentials },
   returns: v.number(),
-  handler: async (ctx, args) => {
-    const player = await getPlayer(ctx, args.roomId, args.playerId);
-    if (!player) throw new Error("Join the room first");
+  handler: async (ctx, { roomId, ...who }) => {
+    const player = await requirePlayer(ctx, roomId, who);
     const chatEpoch = player.chatEpoch + 1;
     await ctx.db.patch("jbPlayers", player._id, { chatEpoch });
     return chatEpoch;
@@ -232,7 +268,7 @@ export const resetChat = mutation({
 export const updateSetup = mutation({
   args: {
     roomId: v.id("jbRooms"),
-    playerId: v.string(),
+    ...credentials,
     bossName: v.string(),
     instruction: v.string(),
     targetDescription: v.string(),
@@ -241,8 +277,8 @@ export const updateSetup = mutation({
     winCheck: v.string(),
   },
   returns: v.null(),
-  handler: async (ctx, { roomId, playerId, ...setup }) => {
-    const room = await requireHost(ctx, roomId, playerId);
+  handler: async (ctx, { roomId, playerId, secret, ...setup }) => {
+    const room = await requireHost(ctx, roomId, { playerId, secret });
     if (!setup.bossName.trim() || !setup.instruction.trim() || !setup.winCheck.trim()) {
       throw new Error("Boss name, instruction, and win check are required");
     }
@@ -267,11 +303,10 @@ export const updateSetup = mutation({
 });
 
 export const newRound = mutation({
-  args: { roomId: v.id("jbRooms"), playerId: v.string() },
+  args: { roomId: v.id("jbRooms"), ...credentials },
   returns: v.null(),
-  handler: async (ctx, args) => {
-    const room = await requireHost(ctx, args.roomId, args.playerId);
-    await startNewRound(ctx, room);
+  handler: async (ctx, { roomId, ...who }) => {
+    await startNewRound(ctx, await requireHost(ctx, roomId, who));
     return null;
   },
 });

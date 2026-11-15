@@ -1,49 +1,36 @@
-import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
-const ID_KEY = "jailbreakBoss.playerId";
+import { useDeviceId } from "@/unpredictable/device";
+
 const NAME_KEY = "jailbreakBoss.name";
+const SECRET_KEY = "jailbreakBoss.secret";
 
-let memoryId: string | undefined;
-let memoryName = "";
+export type JailbreakIdentity = { playerId: string; secret: string; name: string };
 
-function randomId() {
-  return `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+function randomToken(length: number) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, "0")).join("");
 }
 
-function webStorage(kind: "sessionStorage" | "localStorage"): Storage | undefined {
-  if (Platform.OS !== "web") return undefined;
-  return (globalThis as { [key: string]: unknown })[kind] as Storage | undefined;
+export function useJailbreakIdentity(): JailbreakIdentity | null {
+  const playerId = useDeviceId();
+  const [stored, setStored] = useState<{ secret: string; name: string } | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.multiGet([SECRET_KEY, NAME_KEY]).then(async ([[, secret], [, name]]) => {
+      const ensured = secret ?? randomToken(24);
+      if (!secret) await AsyncStorage.setItem(SECRET_KEY, ensured);
+      setStored({ secret: ensured, name: name ?? "" });
+    });
+  }, []);
+
+  return playerId && stored ? { playerId, ...stored } : null;
 }
 
-export function getPlayerId() {
-  const session = webStorage("sessionStorage");
-  if (!session) return (memoryId ??= randomId());
-  let id = session.getItem(ID_KEY);
-  if (!id) {
-    id = randomId();
-    session.setItem(ID_KEY, id);
-  }
-  return id;
-}
-
-export function getSavedName() {
-  return (
-    webStorage("sessionStorage")?.getItem(NAME_KEY) ??
-    webStorage("localStorage")?.getItem(NAME_KEY) ??
-    memoryName
-  );
-}
-
-export function getTabName() {
-  return webStorage("sessionStorage")?.getItem(NAME_KEY) ?? (memoryName || undefined);
-}
-
-export function saveName(name: string) {
-  memoryName = name;
-  webStorage("sessionStorage")?.setItem(NAME_KEY, name);
-  webStorage("localStorage")?.setItem(NAME_KEY, name);
+export async function saveName(name: string) {
+  await AsyncStorage.setItem(NAME_KEY, name);
 }
 
 export function newAttackId() {
-  return randomId();
+  return randomToken(8);
 }

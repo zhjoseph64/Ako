@@ -35,6 +35,8 @@ export const KNIGHT_SKINS = [
   require("../../assets/jailbreak/knight_white.png"),
 ];
 
+export const KNIGHT_COLORS = ["#ff4d4d", "#2fe0d0", "#ffd23f", "#b77cff", "#5ee36a", "#ff9a2e", "#ff6fc0", "#f4f4ff"];
+
 export const ARENA_IMAGE = require("../../assets/jailbreak/arena.png");
 export const DRAGON_SHEET = require("../../assets/jailbreak/dragon_spritesheet.png");
 export const FIREBALL = require("../../assets/jailbreak/fireball.png");

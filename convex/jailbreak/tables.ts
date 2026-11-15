@@ -23,6 +23,7 @@ export const jailbreakTables = {
   jbPlayers: defineTable({
     roomId: v.id("jbRooms"),
     playerId: v.string(),
+    secret: v.optional(v.string()),
     name: v.string(),
     ring: v.number(),
     slot: v.number(),
@@ -50,5 +51,6 @@ export const jailbreakTables = {
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"])
+    .index("by_roomId_and_playerId_and_round_and_chatEpoch", ["roomId", "playerId", "round", "chatEpoch"])
     .index("by_playerId_and_clientAttackId", ["playerId", "clientAttackId"]),
 };

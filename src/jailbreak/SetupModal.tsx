@@ -3,17 +3,18 @@ import { useState } from "react";
 import { Modal, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
+import type { JailbreakIdentity } from "./identity";
 import { colors, PIXEL_FONT } from "./theme";
 import { PixelButton, PixelPanel, PixelText } from "./ui";
 
 export function SetupModal({
   room,
-  playerId,
+  identity,
   isHost,
   onClose,
 }: {
   room: Doc<"jbRooms">;
-  playerId: string;
+  identity: JailbreakIdentity;
   isHost: boolean;
   onClose: () => void;
 }) {
@@ -33,7 +34,7 @@ export function SetupModal({
   async function save() {
     setError(null);
     try {
-      await updateSetup({ roomId: room._id, playerId, ...form });
+      await updateSetup({ roomId: room._id, playerId: identity.playerId, secret: identity.secret, ...form });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message.replace(/^.*Uncaught Error: /s, "").split("\n")[0] : "Could not save");
@@ -113,7 +114,7 @@ export function SetupModal({
                   tone="rune"
                   size={9}
                   onPress={async () => {
-                    await newRound({ roomId: room._id, playerId });
+                    await newRound({ roomId: room._id, playerId: identity.playerId, secret: identity.secret });
                     onClose();
                   }}
                 />

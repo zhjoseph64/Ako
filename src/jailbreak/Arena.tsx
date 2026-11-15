@@ -3,17 +3,18 @@ import { Animated, Easing, Image, Pressable, StyleSheet, View } from "react-nati
 import type { Doc } from "../../convex/_generated/dataModel";
 import { DRAGON_ANCHOR_PX, DragonSprite } from "./DragonSprite";
 import { DRAGON_ANCHOR, ringPosition, STAGE_HEIGHT, STAGE_WIDTH } from "./geometry";
-import { ARENA_IMAGE, BOLT, colors, FIREBALL, KNIGHT_SKINS, outcomeColor } from "./theme";
+import { ARENA_IMAGE, BOLT, colors, FIREBALL, KNIGHT_COLORS, KNIGHT_SKINS, outcomeColor } from "./theme";
 import { PixelText, SpeechBubble } from "./ui";
 import type { useDirector } from "./useDirector";
 
 type Player = Doc<"jbPlayers">;
 type Director = ReturnType<typeof useDirector>;
 
-const KNIGHT_W = 14;
-const KNIGHT_H = 18;
+const KNIGHT_W = 16;
+const KNIGHT_H = 20;
 const KNIGHT_PX = 3.2;
 const DRAGON_PX = 2.7;
+const CROP = { x: 60, y: 140, w: 904, h: 590 };
 
 function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
@@ -23,6 +24,7 @@ function Knight({
   player,
   ring,
   scale,
+  pixel,
   isMe,
   hitKey,
   onPress,
@@ -30,6 +32,7 @@ function Knight({
   player: Player;
   ring: number;
   scale: number;
+  pixel: number;
   isMe: boolean;
   hitKey: number | undefined;
   onPress: () => void;
@@ -65,9 +68,12 @@ function Knight({
     return () => loop.stop();
   }, [bob, player.slot]);
 
-  const w = KNIGHT_W * KNIGHT_PX * scale;
-  const h = KNIGHT_H * KNIGHT_PX * scale;
-  const tagSize = Math.max(6, Math.round(8 * scale + 1));
+  const w = KNIGHT_W * pixel;
+  const h = KNIGHT_H * pixel;
+  const tagSize = Math.max(7, Math.round(8 * scale + 1));
+  const color = KNIGHT_COLORS[player.slot % KNIGHT_COLORS.length];
+  const auraW = w * 1.5;
+  const auraH = w * 0.55;
   return (
     <Animated.View
       style={{
@@ -91,10 +97,25 @@ function Knight({
         accessibilityLabel={`Open ${player.name}'s strategy ledger`}
         testID={`knight-${player.name}`}
         onPress={onPress}
-        hitSlop={10}
+        hitSlop={14}
         style={{ alignItems: "center" }}
       >
-        {isMe && <View style={[styles.meMarker, { borderTopWidth: 7 * scale + 2 }]} />}
+        {isMe && <View style={[styles.meMarker, { borderTopWidth: 9 }]} />}
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: (w - auraW) / 2,
+            top: (isMe ? 11 : 0) + h - auraH * 0.6,
+            width: auraW,
+            height: auraH,
+            borderRadius: auraH,
+            backgroundColor: color,
+            borderWidth: 2,
+            borderColor: isMe ? colors.gold : "#fff6d0",
+            opacity: isMe ? bob.interpolate({ inputRange: [0, 1], outputRange: [0.75, 0.45] }) : 0.55,
+          }}
+        />
         <Animated.Image
           source={KNIGHT_SKINS[player.slot % KNIGHT_SKINS.length]}
           style={{
@@ -104,8 +125,8 @@ function Knight({
             opacity: shake.interpolate({ inputRange: [0, 0.1, 0.3, 0.5, 1], outputRange: [1, 0.3, 1, 0.3, 1] }),
           }}
         />
-        <View style={[styles.nameTag, isMe && { borderColor: colors.gold }]}>
-          <PixelText size={tagSize} color={isMe ? colors.gold : colors.parchment} numberOfLines={1}>
+        <View style={[styles.nameTag, { backgroundColor: color, borderColor: isMe ? colors.gold : colors.ink }]}>
+          <PixelText size={tagSize} color={colors.ink} numberOfLines={1}>
             {player.name}
           </PixelText>
         </View>
@@ -176,11 +197,11 @@ function ResultBanner({ text, color, scale, labelKey }: { text: string; color: s
       pointerEvents="none"
       style={[
         styles.banner,
-        { top: 70 * scale, opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] },
+        { top: 8, opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] },
       ]}
     >
       <View style={[styles.bannerBox, { borderColor: color }]}>
-        <PixelText size={Math.max(8, Math.round(14 * scale + 2))} color={color} style={{ textAlign: "center" }}>
+        <PixelText size={Math.max(10, Math.round(14 * scale + 2))} color={color} style={{ textAlign: "center" }}>
           {text}
         </PixelText>
       </View>
@@ -205,9 +226,13 @@ export function Arena({
   winnerName?: string;
   onSelectPlayer: (player: Player) => void;
 }) {
-  const scale = Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT);
+  const scale = Math.min(width / CROP.w, height / CROP.h);
   const stageW = STAGE_WIDTH * scale;
   const stageH = STAGE_HEIGHT * scale;
+  const boost = Math.min(2.2, Math.max(1.2, 0.95 / scale));
+  const knightPixel = KNIGHT_PX * scale * boost;
+  const visibleLeft = CROP.x * scale;
+  const visibleRight = (CROP.x + CROP.w) * scale;
   const [expiredBubble, setExpiredBubble] = useState<number | null>(null);
   const bubbleKey = director.bubble?.key ?? null;
   const bubbleVisible = bubbleKey !== null && bubbleKey !== expiredBubble;
@@ -225,10 +250,10 @@ export function Arena({
     return player ? ringPosition(ringOf(player), player.slot) : { x: 512, y: 700 };
   };
   const dragonTarget = { x: DRAGON_ANCHOR.x, y: DRAGON_ANCHOR.y - 70 };
-  const dScale = DRAGON_PX * scale;
+  const dScale = DRAGON_PX * scale * Math.min(1.4, boost);
   const dragonTop = DRAGON_ANCHOR.y * scale - DRAGON_ANCHOR_PX.y * dScale;
-  const bubbleFont = Math.max(7, Math.round(10 * scale + 1));
-  const knightH = KNIGHT_H * KNIGHT_PX * scale;
+  const bubbleFont = Math.max(8, Math.round(10 * scale + 1));
+  const knightH = KNIGHT_H * knightPixel;
 
   const drawables = [
     ...players.map((p) => ({ kind: "player" as const, y: ringPosition(ringOf(p), p.slot).y, player: p })),
@@ -238,7 +263,8 @@ export function Arena({
   const bossText = director.thinking && !bubbleVisible ? "..." : bubbleVisible && director.bubble ? director.bubble.text : null;
 
   return (
-    <View style={{ width: stageW, height: stageH, overflow: "hidden" }}>
+    <View style={{ width: CROP.w * scale, height: CROP.h * scale, overflow: "hidden" }}>
+      <View style={{ position: "absolute", left: -visibleLeft, top: -CROP.y * scale, width: stageW, height: stageH }}>
       <Image source={ARENA_IMAGE} style={{ position: "absolute", width: stageW, height: stageH }} />
       {drawables.map((d) =>
         d.kind === "dragon" ? (
@@ -255,6 +281,7 @@ export function Arena({
             player={d.player}
             ring={ringOf(d.player)}
             scale={scale}
+            pixel={knightPixel}
             isMe={d.player.playerId === myId}
             hitKey={director.hitPlayer?.playerId === d.player.playerId ? director.hitPlayer.key : undefined}
             onPress={() => onSelectPlayer(d.player)}
@@ -286,14 +313,14 @@ export function Arena({
 
       {director.launches.map((launch) => {
         const pos = posOf(launch.playerId);
-        const maxWidth = Math.max(140, 300 * scale);
+        const maxWidth = Math.max(150, 300 * scale);
         return (
           <View
             key={`launch-${launch.id}`}
             pointerEvents="none"
             style={{
               position: "absolute",
-              left: Math.min(Math.max(0, pos.x * scale - maxWidth / 2), stageW - maxWidth),
+              left: Math.min(Math.max(visibleLeft, pos.x * scale - maxWidth / 2), visibleRight - maxWidth),
               bottom: stageH - (pos.y * scale - knightH - 6),
               width: maxWidth,
               alignItems: "center",
@@ -325,6 +352,8 @@ export function Arena({
         </View>
       )}
 
+      </View>
+
       {director.label && (
         <ResultBanner
           labelKey={director.label.key}
@@ -335,7 +364,7 @@ export function Arena({
       )}
 
       {director.defeatShown && winnerName && (
-        <View pointerEvents="none" style={[styles.victory, { bottom: 18 * scale }]}>
+        <View pointerEvents="none" style={[styles.victory, { bottom: 8 }]}>
           <View style={styles.bannerBox}>
             <PixelText size={Math.max(8, Math.round(12 * scale + 2))} color={colors.full} style={{ textAlign: "center" }}>
               {`${winnerName.toUpperCase()} BROKE THE BOSS`}

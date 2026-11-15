@@ -1,14 +1,15 @@
 import { useMutation, useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, TextInput, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { api } from "../../../convex/_generated/api";
+import { canonicalRoomCode } from "../../../convex/jailbreak/roomCode";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { Arena } from "@/jailbreak/Arena";
 import { ringLabel } from "@/jailbreak/geometry";
-import { getPlayerId, getTabName, newAttackId } from "@/jailbreak/identity";
+import { newAttackId, useJailbreakIdentity, type JailbreakIdentity } from "@/jailbreak/identity";
 import { LedgerModal } from "@/jailbreak/LedgerModal";
 import { SetupModal } from "@/jailbreak/SetupModal";
 import { colors, outcomeColor, PIXEL_FONT } from "@/jailbreak/theme";
@@ -23,10 +24,21 @@ function errorText(error: unknown) {
 }
 
 export default function JailbreakArena() {
+  const identity = useJailbreakIdentity();
+  if (!identity) {
+    return (
+      <SafeAreaView style={[styles.screen, styles.center]}>
+        <ActivityIndicator color={colors.ember} />
+      </SafeAreaView>
+    );
+  }
+  return <ArenaScreen identity={identity} />;
+}
+
+function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
+  const { playerId, secret, name } = identity;
   const { code } = useLocalSearchParams<{ code: string }>();
-  const roomCode = (code ?? "").toUpperCase();
-  const playerId = useMemo(() => getPlayerId(), []);
-  const window = useWindowDimensions();
+  const roomCode = canonicalRoomCode(code ?? "");
 
   const joinRoom = useMutation(api.jailbreak.rooms.joinRoom);
   const heartbeat = useMutation(api.jailbreak.rooms.heartbeat);
@@ -51,19 +63,19 @@ export default function JailbreakArena() {
 
   useEffect(() => {
     if (!roomCode) return;
-    joinRoom({ code: roomCode, playerId, name: getTabName() }).catch((e) =>
+    joinRoom({ code: roomCode, playerId, secret, name: name || undefined }).catch((e) =>
       setJoinError(errorText(e)),
     );
-  }, [joinRoom, playerId, roomCode]);
+  }, [joinRoom, playerId, secret, roomCode, name]);
 
   useEffect(() => {
     if (!roomId) return;
     const interval = setInterval(() => {
-      heartbeat({ roomId, playerId }).catch(() => {});
+      heartbeat({ roomId, playerId, secret }).catch(() => {});
       setNow(Date.now());
     }, 20_000);
     return () => clearInterval(interval);
-  }, [heartbeat, playerId, roomId]);
+  }, [heartbeat, playerId, secret, roomId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -109,7 +121,7 @@ export default function JailbreakArena() {
     pendingSend.current = attempt;
     setSending(true);
     try {
-      await submitAttack({ roomId, playerId, clientAttackId: attempt.id, prompt: text });
+      await submitAttack({ roomId, playerId, secret, clientAttackId: attempt.id, prompt: text });
       pendingSend.current = null;
       setPrompt("");
     } catch (e) {
@@ -122,33 +134,37 @@ export default function JailbreakArena() {
   async function reset() {
     if (!roomId) return;
     try {
-      const epoch = await resetChat({ roomId, playerId });
+      const epoch = await resetChat({ roomId, playerId, secret });
       setToast({ text: `AI chat reset. Fresh conversation #${epoch + 1}: the boss forgot your earlier prompts.`, tone: "ok", key: Date.now() });
     } catch (e) {
       setToast({ text: errorText(e), tone: "bad", key: Date.now() });
     }
   }
 
-  const compact = window.width < 700;
-
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <View style={styles.hud}>
         <PixelButton label="◂ App" size={8} onPress={() => router.dismissTo("/")} testID="jb-exit" />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <PixelText size={compact ? 9 : 11} color={colors.ember} numberOfLines={1}>
+          <PixelText size={10} color={colors.ember} numberOfLines={1}>
             {room.bossName}
           </PixelText>
           <PixelText size={7} color={colors.muted} numberOfLines={1}>
-            {`Room ${room.code} · ${visiblePlayers.length} knight${visiblePlayers.length === 1 ? "" : "s"} · Goal: ${room.targetDescription}`}
+            {`Room ${room.code} · ${visiblePlayers.length} knight${visiblePlayers.length === 1 ? "" : "s"}`}
           </PixelText>
         </View>
-        <View style={[styles.adapter, adapter.kind === "toy" && { backgroundColor: colors.gold }]}>
+        <PixelButton label={isHost ? "Setup" : "Rules"} size={8} tone="stone" onPress={() => setSetupOpen(true)} testID="jb-setup" />
+      </View>
+      <View style={styles.goalRow}>
+        <PixelText size={7} color={colors.parchment} style={{ flex: 1 }} numberOfLines={2}>
+          {`Goal: ${room.targetDescription}`}
+        </PixelText>
+        <View style={[styles.adapter, adapter.kind === "toy" && { backgroundColor: colors.gold }]} testID="jb-adapter">
           <PixelText size={7} color={colors.ink} numberOfLines={1}>
             {adapter.kind === "toy" ? "TOY BOSS · SIMULATED" : `MODEL · ${adapter.label}`}
           </PixelText>
         </View>
-        <PixelButton label={isHost ? "Setup" : "Rules"} size={8} tone="stone" onPress={() => setSetupOpen(true)} testID="jb-setup" />
       </View>
 
       <View
@@ -179,7 +195,7 @@ export default function JailbreakArena() {
               </View>
             )}
           </View>
-          <PixelText size={9} color={colors.parchment} numberOfLines={3} testID="jb-reply">
+          <PixelText size={9} color={colors.parchment} numberOfLines={4} testID="jb-reply">
             {defeated
               ? `The boss is defeated. ${room.winnerName ?? "A knight"} wins this round.${isHost ? " Open Setup to revive it." : ""}`
               : inFlight
@@ -198,6 +214,7 @@ export default function JailbreakArena() {
         <View style={styles.inputRow}>
           <TextInput
             testID="jb-prompt"
+            accessibilityLabel="Jailbreak prompt"
             value={prompt}
             onChangeText={setPrompt}
             onSubmitEditing={send}
@@ -215,11 +232,13 @@ export default function JailbreakArena() {
             disabled={inFlight || defeated || !prompt.trim()}
             testID="jb-send"
           />
-          <PixelButton label={compact ? "Reset" : "Reset AI chat"} tone="rune" size={compact ? 8 : 9} onPress={reset} disabled={inFlight} testID="jb-reset" />
         </View>
-        <PixelText size={6} color={colors.muted}>
-          Prompts are visible to everyone in this room. Reset only clears your own AI chat; your position and history stay.
-        </PixelText>
+        <View style={styles.resetRow}>
+          <PixelButton label="Reset AI chat" tone="rune" size={8} onPress={reset} disabled={inFlight} testID="jb-reset" />
+          <PixelText size={6} color={colors.muted} style={{ flex: 1 }}>
+            Your prompts are visible to this room. Reset clears only your AI chat; position and history stay.
+          </PixelText>
+        </View>
       </View>
 
       {toast && (
@@ -240,7 +259,8 @@ export default function JailbreakArena() {
           onClose={() => setLedgerFor(null)}
         />
       )}
-      {setupOpen && <SetupModal room={room} playerId={playerId} isHost={isHost} onClose={() => setSetupOpen(false)} />}
+      {setupOpen && <SetupModal room={room} identity={identity} isHost={isHost} onClose={() => setSetupOpen(false)} />}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -258,6 +278,17 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.ink,
     backgroundColor: colors.stone,
   },
+  goalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.night,
+    borderBottomWidth: 3,
+    borderBottomColor: colors.ink,
+  },
+  resetRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   adapter: {
     backgroundColor: colors.full,
     borderWidth: 2,

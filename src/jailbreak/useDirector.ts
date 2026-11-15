@@ -21,7 +21,7 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
   const [dragon, setDragon] = useState<{ anim: DragonAnim; key: number }>({ anim: "idle", key: 0 });
   const [label, setLabel] = useState<ResultLabel | null>(null);
   const [bubble, setBubble] = useState<BossBubble | null>(null);
-  const [holds, setHolds] = useState<Record<string, number>>({});
+  const [holds, setHolds] = useState<Record<string, { ring: number; round: number }>>({});
   const [hitPlayer, setHitPlayer] = useState<{ playerId: string; key: number } | null>(null);
   const [version, setVersion] = useState(0);
   const [reactedIds, setReactedIds] = useState<ReadonlySet<string>>(new Set());
@@ -34,6 +34,7 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
   const reacted = useRef(new Set<string>());
   const queue = useRef<Attack[]>([]);
   const busy = useRef(false);
+  const reacting = useRef<string | null>(null);
   const counter = useRef(1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -43,21 +44,27 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  const releaseHold = useCallback((playerId: string) => {
+    setHolds((current) => {
+      const next = { ...current };
+      delete next[playerId];
+      return next;
+    });
+  }, []);
+
   const finish = useCallback((attack: Attack) => {
     reacted.current.add(attack._id);
     setReactedIds(new Set(reacted.current));
-    setHolds((current) => {
-      const next = { ...current };
-      delete next[attack.playerId];
-      return next;
-    });
+    releaseHold(attack.playerId);
+    reacting.current = null;
     busy.current = false;
     setVersion((v) => v + 1);
-  }, []);
+  }, [releaseHold]);
 
   const react = useCallback(
     (attack: Attack) => {
       busy.current = true;
+      reacting.current = attack._id;
       const key = counter.current++;
       const reply = attack.reply ?? "...";
       const name = attack.playerName.toUpperCase();
@@ -98,6 +105,7 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
         attack.status !== "pending" &&
         landed.current.has(attack._id) &&
         !reacted.current.has(attack._id) &&
+        reacting.current !== attack._id &&
         !queue.current.some((queued) => queued._id === attack._id)
       ) {
         queue.current.push({ ...attack });
@@ -107,11 +115,12 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
       const skipped = queue.current.shift()!;
       reacted.current.add(skipped._id);
       setReactedIds(new Set(reacted.current));
+      if (!queue.current.some((queued) => queued.playerId === skipped.playerId)) releaseHold(skipped.playerId);
     }
     if (busy.current) return;
     const next = queue.current.shift();
     if (next) react(next);
-  }, [react]);
+  }, [react, releaseHold]);
 
   useEffect(() => {
     if (!busy.current) pump();
@@ -136,7 +145,7 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
       if (seen.current.has(attack._id)) continue;
       seen.current.add(attack._id);
       const launch = { id: attack._id, playerId: attack.playerId, text: attack.prompt };
-      setHolds((current) => ({ ...current, [attack.playerId]: attack.ringBefore }));
+      setHolds((current) => ({ ...current, [attack.playerId]: { ring: attack.ringBefore, round: attack.round } }));
       setLaunches((current) => [...current, launch]);
       later(BUBBLE_MS, () => {
         setLaunches((current) => current.filter((l) => l.id !== launch.id));
@@ -170,7 +179,11 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
     dragon: defeatShown && dragon.anim !== "defeat" ? { anim: "defeated" as const, key: dragon.key } : dragon,
     label,
     bubble,
-    holds,
+    holds: Object.fromEntries(
+      Object.entries(holds)
+        .filter(([, hold]) => hold.round === room?.round)
+        .map(([playerId, hold]) => [playerId, hold.ring]),
+    ),
     hitPlayer,
     defeatShown,
     thinking,

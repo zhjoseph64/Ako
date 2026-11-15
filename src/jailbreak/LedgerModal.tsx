@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   sheet: { width: "100%", maxWidth: 620, maxHeight: "90%" },
   header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
-  avatar: { width: 42, height: 54 },
+  avatar: { width: 44, height: 55 },
   scroll: { flexGrow: 0 },
   divider: { alignItems: "center", marginVertical: 8 },
   entry: {

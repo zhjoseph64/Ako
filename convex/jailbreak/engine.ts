@@ -11,6 +11,7 @@ const INNERMOST_RING = 1;
 const OUTER_RING = 3;
 const PUSH_BACK = 1;
 const INCH_FORWARD = 0.5;
+const MAX_HISTORY_TURNS = 40;
 
 export const attackContext = internalQuery({
   args: { attackId: v.id("jbAttacks") },
@@ -27,20 +28,21 @@ export const attackContext = internalQuery({
     if (!attack) return null;
     const room = await ctx.db.get("jbRooms", attack.roomId);
     if (!room) return null;
-    const earlier: Doc<"jbAttacks">[] = await ctx.db
+    const recent: Doc<"jbAttacks">[] = await ctx.db
       .query("jbAttacks")
-      .withIndex("by_roomId_and_playerId", (q) =>
-        q.eq("roomId", attack.roomId).eq("playerId", attack.playerId),
+      .withIndex("by_roomId_and_playerId_and_round_and_chatEpoch", (q) =>
+        q
+          .eq("roomId", attack.roomId)
+          .eq("playerId", attack.playerId)
+          .eq("round", attack.round)
+          .eq("chatEpoch", attack.chatEpoch)
+          .lt("_creationTime", attack._creationTime),
       )
-      .take(500);
-    const history = earlier
-      .filter(
-        (turn) =>
-          turn._creationTime < attack._creationTime &&
-          turn.status === "resolved" &&
-          turn.round === attack.round &&
-          turn.chatEpoch === attack.chatEpoch,
-      )
+      .order("desc")
+      .take(MAX_HISTORY_TURNS);
+    const history = recent
+      .reverse()
+      .filter((turn) => turn.status === "resolved")
       .map((turn) => ({ prompt: turn.prompt, reply: turn.reply ?? "" }));
     return { attack, room, history };
   },
@@ -142,6 +144,22 @@ export const applyResult = internalMutation({
       label: args.label,
       ringBefore: player.ring,
       ringAfter,
+    });
+    return null;
+  },
+});
+
+export const expireAttack = internalMutation({
+  args: { attackId: v.id("jbAttacks") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const attack = await ctx.db.get("jbAttacks", args.attackId);
+    if (!attack || attack.status !== "pending") return null;
+    await ctx.db.patch("jbAttacks", attack._id, {
+      status: "error",
+      reply: "The dragon didn't answer in time. Try again.",
+      label: "TIMED OUT",
+      ringAfter: attack.ringBefore,
     });
     return null;
   },

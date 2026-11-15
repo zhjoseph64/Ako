@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, StyleSheet, TextInput, View, Platform } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { api } from "../../../convex/_generated/api";
@@ -15,6 +15,7 @@ import { SetupModal } from "@/jailbreak/SetupModal";
 import { colors, outcomeColor, PIXEL_FONT } from "@/jailbreak/theme";
 import { PixelButton, PixelPanel, PixelText } from "@/jailbreak/ui";
 import { useDirector } from "@/jailbreak/useDirector";
+import { VictoryOverlay } from "@/jailbreak/VictoryOverlay";
 
 const ACTIVE_MS = 90_000;
 
@@ -44,6 +45,7 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
   const heartbeat = useMutation(api.jailbreak.rooms.heartbeat);
   const submitAttack = useMutation(api.jailbreak.rooms.submitAttack);
   const resetChat = useMutation(api.jailbreak.rooms.resetChat);
+  const newRound = useMutation(api.jailbreak.rooms.newRound);
 
   const data = useQuery(api.jailbreak.rooms.getRoom, { code: roomCode });
   const roomId = data?.room._id;
@@ -100,7 +102,7 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
     );
   }
 
-  const { room, players, adapter } = data;
+  const { room, players, model, winningAttack } = data;
   const me = players.find((p) => p.playerId === playerId);
   const visiblePlayers = players.filter((p) => p.playerId === playerId || now - p.lastSeen < ACTIVE_MS);
   const isHost = room.hostId === playerId;
@@ -131,6 +133,17 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
     }
   }
 
+  async function playAgain() {
+    if (!roomId) return;
+    try {
+      await newRound({ roomId, playerId, secret });
+    } catch (e) {
+      setToast({ text: errorText(e), tone: "bad", key: Date.now() });
+    }
+  }
+
+  const showVictory = defeated && director.defeatShown;
+
   async function reset() {
     if (!roomId) return;
     try {
@@ -160,9 +173,9 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
         <PixelText size={7} color={colors.parchment} style={{ flex: 1 }} numberOfLines={2}>
           {`Goal: ${room.targetDescription}`}
         </PixelText>
-        <View style={[styles.adapter, adapter.kind === "toy" && { backgroundColor: colors.gold }]} testID="jb-adapter">
+        <View style={styles.adapter} testID="jb-adapter">
           <PixelText size={7} color={colors.ink} numberOfLines={1}>
-            {adapter.kind === "toy" ? "TOY BOSS · SIMULATED" : `MODEL · ${adapter.label}`}
+            {`MODEL · ${model}`}
           </PixelText>
         </View>
       </View>
@@ -195,9 +208,10 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
               </View>
             )}
           </View>
-          <PixelText size={9} color={colors.parchment} numberOfLines={4} testID="jb-reply">
+          <ScrollView style={styles.replyScroll} nestedScrollEnabled>
+          <PixelText size={9} color={colors.parchment} testID="jb-reply">
             {defeated
-              ? `The boss is defeated. ${room.winnerName ?? "A knight"} wins this round.${isHost ? " Open Setup to revive it." : ""}`
+              ? `The boss is defeated. ${room.winnerName ?? "A knight"} wins this round.`
               : inFlight
                 ? "Your attack is in flight…"
                 : latestReply && !chatWasReset
@@ -210,6 +224,7 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
                         ? "The dragon is answering…"
                         : "Type a prompt and send it at the dragon. Tap any knight to read their strategy ledger."}
           </PixelText>
+          </ScrollView>
         </PixelPanel>
         <View style={styles.inputRow}>
           <TextInput
@@ -252,6 +267,24 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
             </PixelText>
           </View>
         </View>
+      )}
+
+      {showVictory && (
+        <VictoryOverlay
+          key={room.round}
+          room={room}
+          winningAttack={winningAttack}
+          model={model}
+          myId={playerId}
+          winnerCredits={players.find((p) => p.playerId === room.winnerId)?.credits}
+          celebrate={director.dragon.anim === "defeat"}
+          onPlayAgain={playAgain}
+          onBack={() => router.dismissTo("/")}
+          onReadLedger={() => {
+            const winner = players.find((p) => p.playerId === room.winnerId);
+            if (winner) setLedgerFor(winner);
+          }}
+        />
       )}
 
       {ledgerFor && roomId && (
@@ -312,6 +345,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   response: { minHeight: 64 },
+  replyScroll: { maxHeight: 96 },
   responseHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" },
   tag: { borderWidth: 2, borderColor: colors.ink, paddingHorizontal: 4 },
   inputRow: { flexDirection: "row", gap: 6, alignItems: "stretch" },

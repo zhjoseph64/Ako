@@ -1,7 +1,7 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export const winCheckType = v.union(v.literal("exact"), v.literal("regex"));
+export const winCheckType = v.union(v.literal("word"), v.literal("exact"), v.literal("regex"));
 export const attackOutcome = v.union(v.literal("held"), v.literal("partial"), v.literal("full"));
 
 export const jailbreakTables = {
@@ -18,6 +18,7 @@ export const jailbreakTables = {
     round: v.number(),
     winnerId: v.optional(v.string()),
     winnerName: v.optional(v.string()),
+    winningAttackId: v.optional(v.id("jbAttacks")),
   }).index("by_code", ["code"]),
 
   jbPlayers: defineTable({
@@ -29,6 +30,7 @@ export const jailbreakTables = {
     slot: v.number(),
     chatEpoch: v.number(),
     lastSeen: v.number(),
+    credits: v.optional(v.number()),
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"]),

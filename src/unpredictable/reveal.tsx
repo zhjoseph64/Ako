@@ -230,7 +230,10 @@ export function Reveal(props: Props) {
         )}
       </Animated.View>
 
-      <Animated.View style={[styles.after, afterStyle]}>
+      <Animated.View
+        style={[styles.after, afterStyle]}
+        pointerEvents={shown ? "auto" : "none"}
+      >
         <View style={styles.speech}>
           <Opponent mood={shown ? verdict.mood : "thinking"} scale={4} />
           <View style={styles.bubble}>

@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile and rank</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+a{color:#D9CCFF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit}
+.bglow{animation:bpulse 2.8s ease-in-out infinite}
+.floaty{animation:floaty 4s ease-in-out infinite}
+.shine{animation:shine 3.6s ease-in-out infinite}
+.spin{transform-origin:center;transform-box:fill-box;animation:spin 18s linear infinite}
+@keyframes bpulse{0%,100%{opacity:.3}50%{opacity:.8}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes shine{0%{transform:translateX(-140%) skewX(-18deg)}60%,100%{transform:translateX(240%) skewX(-18deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.live-dot{transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
+.sheen{animation:sheen 2.6s ease-in-out infinite}
+.flow{animation:flow 1.2s linear infinite}
+.tip{animation:tip 1.6s ease-in-out infinite}
+.spark{animation:spark 1.8s ease-out infinite}
+.spark.s2{animation-delay:.6s}
+.spark.s3{animation-delay:1.2s}
+.sheet{animation:rise .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes sheen{0%{transform:translateX(-100%)}70%,100%{transform:translateX(260%)}}
+@keyframes flow{from{background-position:0 0}to{background-position:24px 0}}
+@keyframes tip{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.35);opacity:1}}
+@keyframes spark{0%{transform:translate(0,0) scale(1);opacity:0}15%{opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+@keyframes rise{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="width:390px;height:1720px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:54px 12px 0">
+    <a href="Main.dc.html" aria-label="Back to home" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#F5F3FB">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+    <span style="font-size:16px;font-weight:600">Profile</span>
+    <button type="button" aria-label="Edit avatar" onClick="{{openEditor}}" style="width:44px;height:44px;border-radius:22px;border:0;background:#15151F;color:#F5F3FB;display:flex;align-items:center;justify-content:center;cursor:pointer">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"></path><path d="M13.5 6.5l4 4"></path></svg>
+    </button>
+  </header>
+
+  <section aria-label="Avatar" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 20px 0">
+    <svg width="124" height="124" viewBox="0 0 124 124" role="img" aria-label="Your avatar">
+      <defs>
+        <linearGradient id="av-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="{{av.c1}}"></stop>
+          <stop offset="1" stop-color="{{av.c2}}"></stop>
+        </linearGradient>
+      </defs>
+      <circle cx="62" cy="62" r="60" fill="none" stroke="{{av.c1}}" stroke-width="1.5" stroke-dasharray="3 7" opacity="{{av.halo}}" class="spin"></circle>
+      <circle cx="62" cy="62" r="48" fill="url(#av-bg)"></circle>
+      <circle cx="62" cy="62" r="53" fill="none" stroke="{{av.c2}}" stroke-width="3" opacity="{{av.ring}}"></circle>
+      <path d="M62 4 L120 62 L62 120 L4 62 Z" fill="none" stroke="{{av.c1}}" stroke-width="2.5" stroke-linejoin="round" opacity="{{av.gem}}"></path>
+      <rect x="46" y="50" width="9" height="15" rx="4.5" fill="#141120"></rect>
+      <rect x="69" y="50" width="9" height="15" rx="4.5" fill="#141120"></rect>
+      <path d="M50 76 Q62 85 74 76" fill="none" stroke="#141120" stroke-width="4" stroke-linecap="round"></path>
+      <path d="M20 28 L23 32 L20 36 L17 32 Z M104 22 L107 26 L104 30 L101 26 Z M108 92 L110.5 95 L108 98 L105.5 95 Z" fill="#FFFFFF" opacity="{{av.sparkle}}"></path>
+    </svg>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:24px;font-weight:600;letter-spacing:-0.3px">@nova</span>
+      <span style="font-size:13.5px;color:#A7A3BC">Joined Nov 2026 · 12-day streak</span>
+    </div>
+
+  </section>
+
+  <section aria-label="Your rank" style="margin:18px 20px 0;padding:20px 18px 18px;border-radius:26px;background:#14131F;border:1px solid #2A2840;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(60% 45% at 50% 22%, rgba(127,142,240,0.22), rgba(11,11,20,0) 70%)"></div>
+    <div class="floaty" style="position:relative;width:150px;height:150px">
+      <dc-import name="Badge" tier="variant" division="{{ 2 }}" size="{{ 150 }}" glow="{{ true }}" hint-size="150px,150px"></dc-import>
+    </div>
+    <span style="position:relative;font-family:'Space Grotesk', Inter, sans-serif;font-size:30px;font-weight:700;letter-spacing:-0.5px">Variant 2</span>
+    <span style="position:relative;font-size:14px;color:#A7A3BC">Rating <span style="color:#F5F3FB;font-weight:600;font-variant-numeric:tabular-nums">{{rating}}</span></span>
+
+    <div style="position:relative;width:100%;margin-top:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600">
+        <span style="color:#F5F3FB;font-variant-numeric:tabular-nums">{{rp}} / 100 RP</span>
+        <span style="color:#D9CCFF">{{toGo}} RP to Variant 3</span>
+      </div>
+      <div role="progressbar" aria-label="Progress to Variant 3" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{rp}}" style="position:relative;height:14px;border-radius:7px;background:#1C1B2E;box-shadow:inset 0 0 0 1px #2A2840">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:{{rp}}%;border-radius:7px;overflow:hidden;background:linear-gradient(90deg,#6E58D8,#8E9BF0 55%,#B6F2F0);box-shadow:0 0 16px rgba(142,155,240,0.55)">
+          <div class="flow" style="position:absolute;inset:0;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,0.13) 0 6px,rgba(255,255,255,0) 6px 12px);background-size:24px 14px"></div>
+          <div class="sheen" style="position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.55),rgba(255,255,255,0))"></div>
+        </div>
+        <div style="position:absolute;top:50%;left:{{rp}}%;width:0;height:0">
+          <span class="tip" style="position:absolute;left:-13px;top:-13px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#FFFFFF 0 22%,#B6F2F0 38%,rgba(182,242,240,0.35) 55%,rgba(182,242,240,0) 72%)"></span>
+          <span class="spark" style="--dx:10px;--dy:-16px;position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:2px;background:#FFFFFF"></span>
+          <span class="spark s2" style="--dx:16px;--dy:-6px;position:absolute;left:-2px;top:-2px;width:3px;height:3px;border-radius:2px;background:#B6F2F0"></span>
+          <span class="spark s3" style="--dx:8px;--dy:12px;position:absolute;left:-2px;top:-2px;width:3px;height:3px;border-radius:2px;background:#F0B3E2"></span>
+        </div>
+      </div>
+    </div>
+
+    <ol aria-label="Variant divisions" style="position:relative;list-style:none;margin:16px 0 0;padding:0;width:100%;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr))">
+      <li style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.78">
+        <dc-import name="Badge" tier="variant" division="{{ 1 }}" size="{{ 38 }}" hint-size="38px,38px"></dc-import>
+        <span style="font-size:12px;font-weight:600;color:#BDB9D0">Variant 1</span>
+        <span style="font-size:11px;color:#79E2D6;font-weight:600">Cleared</span>
+      </li>
+      <li style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="padding:2px;border-radius:14px;box-shadow:0 0 0 1.5px #8E9BF0;display:flex">
+          <dc-import name="Badge" tier="variant" division="{{ 2 }}" size="{{ 38 }}" glow="{{ true }}" hint-size="38px,38px"></dc-import>
+        </span>
+        <span style="font-size:12px;font-weight:700;color:#F5F3FB">Variant 2</span>
+        <span style="font-size:11px;color:#D9CCFF;font-weight:600">You're here</span>
+      </li>
+      <li style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.72">
+        <dc-import name="Badge" tier="variant" division="{{ 3 }}" size="{{ 38 }}" hint-size="38px,38px"></dc-import>
+        <span style="font-size:12px;font-weight:600;color:#BDB9D0">Variant 3</span>
+        <span style="font-size:11px;color:#A7A3BC;font-weight:600">{{toGo}} RP away</span>
+      </li>
+    </ol>
+
+    <a href="Ranks.dc.html" style="position:relative;width:100%;margin-top:12px;box-sizing:border-box;padding:12px 14px;border-radius:16px;background:#1B1A2B;display:flex;align-items:center;gap:12px;color:#F5F3FB;min-height:44px">
+      <dc-import name="Badge" tier="outlier" division="{{ 1 }}" size="{{ 40 }}" hint-size="40px,40px"></dc-import>
+      <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:14.5px;font-weight:600">Next tier: Outlier</span>
+        <span style="font-size:12.5px;color:#A7A3BC">258 rating away · 1.6x points</span>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A7A3BC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+    </a>
+  </section>
+
+  <section aria-label="Performance" style="padding:26px 20px 0;display:flex;flex-direction:column;gap:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 style="margin:0;font-family:'Space Grotesk', Inter, sans-serif;font-size:19px;font-weight:600">Performance</h2>
+      <div role="tablist" aria-label="Chart" style="display:flex;gap:4px;padding:3px;border-radius:999px;background:#15151F">
+        <sc-for list="{{cModes}}" as="m" hint-placeholder-count="2">
+          <button type="button" role="tab" aria-selected="{{m.selected}}" onClick="{{m.pick}}" style="{{m.style}}">{{m.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <span style="font-size:14px;color:#A7A3BC;font-weight:500">{{cTitle}}</span>
+    <div style="display:flex;align-items:center;gap:10px;min-height:46px">
+      <div style="display:flex;align-items:baseline;gap:7px">
+        <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:40px;font-weight:600;letter-spacing:-1.2px;line-height:1.05;font-variant-numeric:tabular-nums">{{cValue}}</span>
+        <span style="font-size:16px;color:#A7A3BC;font-weight:500">{{cUnit}}</span>
+      </div>
+      <sc-if value="{{isRating}}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Badge" tier="{{rTier}}" division="{{rDiv}}" size="{{ 40 }}" glow="{{ true }}" hint-size="40px,40px"></dc-import>
+      </sc-if>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:600;min-height:22px">
+      <span style="color:{{lineColor}};font-variant-numeric:tabular-nums">{{cDelta}}</span>
+      <span style="color:#A7A3BC;font-weight:500">{{cDeltaLabel}}</span>
+    </div>
+  </section>
+
+  <figure style="margin:6px 0 0;height:190px;position:relative;flex:none">
+    <svg width="390" height="190" viewBox="0 0 390 190" role="img" aria-label="{{chartLabel}}" style="display:block">
+      <line x1="0" y1="{{baseY}}" x2="390" y2="{{baseY}}" stroke="#4A4766" stroke-width="1.2" stroke-dasharray="2 5" opacity="{{baseOpacity}}"></line>
+      <sc-for list="{{tierLines}}" as="t" hint-placeholder-count="0">
+        <line x1="0" y1="{{t.y}}" x2="390" y2="{{t.y}}" stroke="{{t.color}}" stroke-width="1" stroke-dasharray="4 4" opacity="0.55"></line>
+      </sc-for>
+      <path d="{{path}}" fill="none" stroke="{{lineColor}}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity="{{lineOpacity}}"></path>
+      <path d="{{pathActive}}" fill="none" stroke="{{lineColor}}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+      <line x1="{{hx}}" y1="18" x2="{{hx}}" y2="190" stroke="#BDB9D0" stroke-width="1" opacity="{{hOpacity}}"></line>
+      <circle cx="{{hx}}" cy="{{hy}}" r="5" fill="{{lineColor}}" stroke="#0B0B14" stroke-width="2" opacity="{{hOpacity}}"></circle>
+      <circle class="live-dot" cx="{{endX}}" cy="{{endY}}" r="4.5" fill="{{lineColor}}" opacity="{{endOpacity}}"></circle>
+      <circle cx="{{endX}}" cy="{{endY}}" r="4.5" fill="{{lineColor}}" stroke="#0B0B14" stroke-width="2" opacity="{{endOpacity}}"></circle>
+    </svg>
+    <sc-for list="{{tierLines}}" as="t" hint-placeholder-count="0">
+      <span style="position:absolute;right:8px;top:{{t.ty}}px;padding:2px 7px;border-radius:999px;background:#0B0B14;font-size:11px;font-weight:700;color:{{t.color}};pointer-events:none">{{t.label}}</span>
+    </sc-for>
+    <span style="position:absolute;top:0;left:{{hlx}}px;transform:translateX(-50%);font-size:11.5px;font-weight:600;color:#BDB9D0;white-space:nowrap;pointer-events:none;opacity:{{hOpacity}}">{{hLabel}}</span>
+    <div aria-hidden="true" onPointerMove="{{scrub}}" onPointerDown="{{scrub}}" onPointerLeave="{{endScrub}}" onPointerUp="{{endScrubTouch}}" style="position:absolute;inset:0;cursor:crosshair;touch-action:none"></div>
+  </figure>
+
+  <div role="group" aria-label="Chart range" style="display:flex;gap:6px;padding:6px 20px 0">
+    <sc-for list="{{ranges}}" as="r" hint-placeholder-count="5">
+      <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="{{r.style}}">{{r.label}}</button>
+    </sc-for>
+  </div>
+
+  <section aria-label="Highlights" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px;padding:14px 20px 0">
+    <div style="padding:14px;border-radius:18px;background:#15151F;display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:12.5px;color:#A7A3BC">AI fooled</span>
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:24px;font-weight:600">61%</span>
+    </div>
+    <div style="padding:14px;border-radius:18px;background:#15151F;display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:12.5px;color:#A7A3BC">Labels verified</span>
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:24px;font-weight:600">1,380</span>
+    </div>
+  </section>
+
+  <section aria-label="Recent matches" style="padding:22px 20px 0;display:flex;flex-direction:column">
+    <h2 style="margin:0 0 4px;font-family:'Space Grotesk', Inter, sans-serif;font-size:19px;font-weight:600">Recent matches</h2>
+    <sc-for list="{{matches}}" as="m" hint-placeholder-count="3">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1E1E2E">
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:15px;font-weight:600">{{m.game}}</span>
+          <span style="font-size:13px;color:#A7A3BC">{{m.detail}}</span>
+        </div>
+        <span style="{{m.pill}}">{{m.delta}}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="flex:1"></div>
+
+  <nav aria-label="Main" style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));padding:10px 6px 30px;border-top:1px solid #1E1E2E;background:#0B0B14">
+    <a href="Main.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+    <a href="GutCheck.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5.5"></rect><path d="M7.5 10.5v4M5.5 12.5h4"></path><circle cx="16" cy="11.5" r="0.9" fill="currentColor"></circle><circle cx="17.5" cy="14" r="0.9" fill="currentColor"></circle></svg>Play</a>
+    <a href="Leaderboard.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>Ranks</a>
+    <a href="Wallet.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"></rect><path d="M3 10h18M16 15h2"></path><path d="M6 6V5a2 2 0 0 1 2-2h9"></path></svg>Wallet</a>
+    <a href="Profile.dc.html" aria-current="page" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#F5F3FB;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Profile</a>
+  </nav>
+
+  <sc-if value="{{editing}}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(5,5,10,0.72)"><div style="height:844px;display:flex;flex-direction:column;justify-content:flex-end">
+      <button type="button" aria-label="Close editor" onClick="{{closeEditor}}" style="flex:1;border:0;background:transparent;cursor:pointer"></button>
+      <div class="sheet" role="dialog" aria-label="Edit avatar" style="background:#15151F;border-radius:28px 28px 0 0;border-top:1px solid #2A2840;padding:12px 20px 36px;display:flex;flex-direction:column;align-items:center;gap:16px">
+        <div style="width:40px;height:5px;border-radius:3px;background:#3A3852"></div>
+        <div style="width:100%;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:21px;font-weight:600">Edit avatar</span>
+          <button type="button" onClick="{{closeEditor}}" style="height:40px;padding:0 16px;border-radius:999px;border:0;background:#F5F3FB;color:#141120;font-size:14.5px;font-weight:700;cursor:pointer">Done</button>
+        </div>
+        <svg width="104" height="104" viewBox="0 0 124 124" role="img" aria-label="Avatar preview">
+      <defs>
+        <linearGradient id="av-bg2" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="{{av.c1}}"></stop>
+          <stop offset="1" stop-color="{{av.c2}}"></stop>
+        </linearGradient>
+      </defs>
+      <circle cx="62" cy="62" r="60" fill="none" stroke="{{av.c1}}" stroke-width="1.5" stroke-dasharray="3 7" opacity="{{av.halo}}" class="spin"></circle>
+      <circle cx="62" cy="62" r="48" fill="url(#av-bg2)"></circle>
+      <circle cx="62" cy="62" r="53" fill="none" stroke="{{av.c2}}" stroke-width="3" opacity="{{av.ring}}"></circle>
+      <path d="M62 4 L120 62 L62 120 L4 62 Z" fill="none" stroke="{{av.c1}}" stroke-width="2.5" stroke-linejoin="round" opacity="{{av.gem}}"></path>
+      <rect x="46" y="50" width="9" height="15" rx="4.5" fill="#141120"></rect>
+      <rect x="69" y="50" width="9" height="15" rx="4.5" fill="#141120"></rect>
+      <path d="M50 76 Q62 85 74 76" fill="none" stroke="#141120" stroke-width="4" stroke-linecap="round"></path>
+      <path d="M20 28 L23 32 L20 36 L17 32 Z M104 22 L107 26 L104 30 L101 26 Z M108 92 L110.5 95 L108 98 L105.5 95 Z" fill="#FFFFFF" opacity="{{av.sparkle}}"></path>
+    </svg>
+        <div role="tablist" aria-label="Customize avatar" style="width:100%;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:4px;padding:4px;box-sizing:border-box;border-radius:999px;background:#0F0F18">
+          <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+            <button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+              <button type="button" aria-label="{{o.label}}" aria-pressed="{{o.pressed}}" onClick="{{o.pick}}" style="{{o.style}}">
+                <span style="{{o.swatch}}"></span>
+              </button>
+              <span style="font-size:11.5px;color:#A7A3BC">{{o.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1720}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'Color', color: 0, frame: 1, aura: 1, rating: 1600, rp: 0, editing: false, mode: 'points', range: '1W', hover: null };
+    this.series = {"p1D":[11840,11852,11871,11908,11909,11921,11932,11938,11958,11954,11951,11959,11974,11982,12011,12021,11951,11982,11984,11980,11988,11975,11992,11978,11995,12011,12025,12014,11985,11980,11977,11905,11902,11892,11882,11860,11860,11841,11828,11846,11855,11871,11874,11851,11829,11799,11800,11806,11818,11852,11884,11912,11909,11921,11945,11943,11974,12024,12073,12082,12102,12126,12158,12158,12155,12177,12171,12216,12260,12261,12266,12284,12334,12381,12439,12452,12470,12480],"p1W":[10170,9971,9936,9882,9949,9918,9865,9939,9996,9967,9996,9980,9939,9983,10067,10136,10243,10399,10567,10635,10696,10832,10958,11124,11223,11239,11338,11326,11342,11344,11228,11236,11272,11347,11350,11379,11337,11372,11402,11495,11517,11502,11521,11464,11446,11537,11641,11775,11605,11669,11762,11854,11876,11855,11899,11880,11824,11730,11603,11555,11558,11515,11513,11528,11573,11531,11547,11574,11539,11610,11722,11783,11830,11883,11864,11929,12026,12150,12266,12383,12401,12370,12424,12480],"p1M":[5560,5691,5640,5545,5415,5439,5542,5549,5764,6119,6420,6503,6471,6428,6381,6393,6630,6768,6760,6963,7029,7194,7477,7590,7526,7725,7723,7699,7739,7921,8078,8206,8378,8385,8529,8603,8811,8971,8971,8955,8942,8413,8521,8561,8522,8407,8568,8680,8705,8633,8651,8554,8639,8755,8830,8916,9003,9030,8913,8733,8564,8358,8293,8366,8375,8356,8370,8217,8473,8601,8812,9152,9297,9452,9609,9864,10157,10275,10269,10325,10595,10622,10787,10831,11062,11334,11505,11792,12084,12480],"p3M":[2330,2725,3117,3638,4272,4461,4848,5058,5203,5221,5491,5587,5548,5390,4484,3685,3626,3818,4139,4437,4506,4646,5030,4964,4824,4625,4355,4493,4584,4470,4514,4861,5422,5893,6313,6496,6758,6813,6833,6706,6772,7082,7407,7404,7339,7112,7116,7238,7460,7477,7773,7746,7803,8090,8472,8608,9039,9181,9363,9743,10034,10207,10167,10338,10416,10620,11043,11123,11451,11970,12145,12147,12078,11992,11400,11211,11231,11529,11934,12328,12099,12251,12416,12383,12286,12518,12582,12418,12557,12480],"pALL":[0,0,0,0,0,0,0,0,139,317,308,373,624,720,821,757,643,792,1095,1169,1489,1573,1583,1464,1488,1706,2120,2604,2888,3272,3138,3177,3248,3220,3261,3198,3101,2897,2707,2774,2844,2999,3162,3473,3905,4323,4719,4879,5048,5162,5171,5103,5376,5667,5828,6011,6115,6273,6410,6722,6878,6899,6894,6739,6776,6935,7271,7680,7861,8073,8234,8400,8498,8422,8621,8976,9375,9815,10064,10473,10713,10703,10600,10750,10879,10848,11128,11203,11090,11280,11652,11822,12278,12462,12472,12706,12692,12614,12656,12480],"r1D":[1718,1722,1722,1719,1720,1724,1728,1729,1730,1732,1732,1731,1734,1738,1732,1737,1740,1740,1737,1734,1728,1722,1720,1718,1716,1710,1709,1709,1710,1714,1718,1723,1727,1733,1736,1737,1742,1744,1742,1742],"r1W":[1655,1658,1654,1647,1644,1648,1643,1652,1653,1646,1651,1655,1627,1631,1637,1651,1651,1653,1659,1629,1623,1625,1619,1613,1610,1605,1624,1644,1649,1651,1655,1652,1652,1646,1639,1642,1641,1637,1642,1637,1635,1633,1621,1630,1634,1629,1635,1643,1651,1668,1689,1687,1693,1699,1705,1706,1711,1720,1732,1742],"r1M":[1540,1530,1540,1550,1568,1589,1608,1617,1621,1616,1618,1624,1622,1616,1616,1615,1628,1648,1663,1656,1639,1632,1580,1573,1569,1568,1577,1574,1578,1576,1567,1559,1572,1579,1596,1619,1633,1654,1675,1680,1692,1692,1686,1671,1671,1680,1671,1681,1673,1662,1645,1640,1638,1640,1657,1667,1673,1687,1704,1712,1717,1735,1753,1767,1763,1761,1749,1728,1708,1694,1700,1707,1707,1691,1703,1721,1737,1733,1729,1742],"r3M":[1310,1298,1309,1343,1344,1338,1325,1322,1341,1363,1407,1421,1429,1461,1461,1443,1446,1429,1432,1460,1470,1481,1478,1507,1512,1501,1515,1509,1486,1475,1470,1458,1467,1458,1457,1482,1499,1488,1480,1483,1480,1502,1496,1475,1468,1466,1447,1421,1430,1466,1491,1507,1534,1563,1567,1558,1533,1548,1563,1560,1574,1602,1619,1609,1534,1550,1556,1539,1529,1550,1559,1591,1640,1654,1642,1615,1595,1504,1502,1491,1504,1512,1530,1547,1587,1632,1684,1714,1736,1742],"rALL":[1000,1021,1041,1066,1070,1057,1054,1057,1041,1046,1050,1041,1057,1055,1040,1053,1089,1139,1151,1139,1155,1152,1147,1155,1147,1143,1113,1144,1155,1165,1164,1190,1219,1224,1256,1283,1326,1348,1384,1417,1422,1405,1410,1442,1450,1462,1472,1480,1508,1535,1576,1521,1512,1499,1477,1462,1444,1455,1457,1474,1493,1521,1522,1508,1520,1534,1495,1513,1532,1540,1572,1577,1609,1639,1646,1669,1656,1697,1715,1705,1730,1728,1749,1757,1749,1739,1714,1726,1711,1696,1696,1678,1661,1667,1675,1670,1656,1676,1704,1742]};
+  }
+  componentDidMount() {
+    var self = this;
+    var start = null;
+    var dur = 1500;
+    function step(ts) {
+      if (start === null) start = ts;
+      var p = Math.min(1, (ts - start) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      self.setState({ rating: Math.round(1600 + 142 * e), rp: Math.round(68 * e) });
+      if (p < 1) self.raf = requestAnimationFrame(step);
+    }
+    this.raf = requestAnimationFrame(step);
+  }
+  componentWillUnmount() {
+    if (this.raf) cancelAnimationFrame(this.raf);
+  }
+  chartVals() {
+    var self = this;
+    var s = this.state;
+    var isPts = s.mode === 'points';
+    var data = this.series[(isPts ? 'p' : 'r') + s.range];
+    var n = data.length;
+    var W = 390, top = 24, bottom = 182, xMax = 372;
+    var min = Math.min.apply(null, data), max = Math.max.apply(null, data);
+    var pad = (max - min) * 0.08 || 1;
+    var lo = min - pad, hi = max + pad;
+    function X(i) { return +(i / (n - 1) * xMax).toFixed(1); }
+    function Y(v) { return +(top + (hi - v) / (hi - lo) * (bottom - top)).toFixed(1); }
+    function build(a, b) { var d = ''; for (var i = a; i <= b; i++) d += (i === a ? 'M' : 'L') + X(i) + ' ' + Y(data[i]); return d; }
+    var h = s.hover;
+    var scrubbing = h !== null && h >= 0 && h < n;
+    var idx = scrubbing ? h : n - 1;
+    var v = data[idx], start = data[0], d = v - start, up = d >= 0;
+    var lineColor = up ? (isPts ? '#79E2D6' : '#B9A6FF') : '#FF9A85';
+    var fmt = function (x) { return Math.round(x).toLocaleString('en-US'); };
+    var spans = { '1D': 12 * 3600e3, '1W': 7 * 86400e3, '1M': 30 * 86400e3, '3M': 91 * 86400e3, 'ALL': 137 * 86400e3 };
+    var labels = { '1D': 'Today', '1W': 'Past week', '1M': 'Past month', '3M': 'Past 3 months', 'ALL': 'All time' };
+    var end = new Date(2026, 10, 15, 14, 30).getTime();
+    var t = new Date(end - spans[s.range] * (1 - idx / (n - 1)));
+    var opt = s.range === '1D' ? { hour: 'numeric', minute: '2-digit' } : (s.range === '1W' ? { weekday: 'short', hour: 'numeric' } : { month: 'short', day: 'numeric' });
+    var when = t.toLocaleString('en-US', opt);
+    var hx = X(idx);
+    var tierLines = [];
+    if (!isPts) {
+      [[1000, 'Signal', '#B08BF2'], [1500, 'Variant', '#8E9BF0'], [2000, 'Outlier', '#79C6CC']].forEach(function (tl) {
+        if (tl[0] > lo && tl[0] < hi) { var y = Y(tl[0]); tierLines.push({ y: y, ty: y - 20, label: tl[1] + ' · ' + fmt(tl[0]), color: tl[2] }); }
+      });
+    }
+    var activeBg = isPts ? '#173A38' : '#2A2450';
+    var activeFg = isPts ? '#79E2D6' : '#C9B8FF';
+    return {
+      cModes: [['points', 'Points'], ['rating', 'Rating']].map(function (m) {
+        var on = m[0] === s.mode;
+        return { label: m[1], selected: on ? 'true' : 'false', pick: function () { self.setState({ mode: m[0], hover: null }); }, style: 'height:32px;padding:0 14px;border:0;border-radius:999px;cursor:pointer;font-size:13px;font-weight:700;' + (on ? 'background:#F5F3FB;color:#141120' : 'background:transparent;color:#A7A3BC') };
+      }),
+      isRating: !isPts,
+      rTier: ['echo', 'pattern', 'signal', 'variant', 'outlier', 'anomaly', 'paradox'][Math.max(0, Math.min(6, Math.floor(v / 500)))],
+      rDiv: Math.min(3, Math.floor((v % 500) / 167) + 1),
+      cTitle: isPts ? 'Points earned' : 'Rating',
+      cValue: fmt(v),
+      cUnit: isPts ? 'pts' : '',
+      cDelta: (up ? '+' : '−') + fmt(Math.abs(d)) + (isPts && start > 0 ? ' (' + (Math.abs(d) / start * 100).toFixed(1) + '%)' : ''),
+      cDeltaLabel: scrubbing ? when : labels[s.range],
+      lineColor: lineColor,
+      chartLabel: (isPts ? 'Points' : 'Rating') + ' history, ' + labels[s.range].toLowerCase(),
+      path: build(0, n - 1),
+      pathActive: scrubbing ? build(0, idx) : 'M0 0',
+      lineOpacity: scrubbing ? 0.28 : 1,
+      baseY: Y(start),
+      baseOpacity: isPts ? 1 : 0,
+      tierLines: tierLines,
+      hx: hx, hy: Y(v),
+      hlx: Math.max(40, Math.min(350, hx)),
+      hLabel: when,
+      hOpacity: scrubbing ? 1 : 0,
+      endX: X(n - 1), endY: Y(data[n - 1]),
+      endOpacity: scrubbing ? 0 : 1,
+      ranges: ['1D', '1W', '1M', '3M', 'ALL'].map(function (k) {
+        var on = k === s.range;
+        return { label: k, pressed: on ? 'true' : 'false', pick: function () { self.setState({ range: k, hover: null }); }, style: 'min-width:52px;height:36px;padding:0 12px;border-radius:999px;border:0;cursor:pointer;font-size:13.5px;font-weight:700;' + (on ? 'background:' + activeBg + ';color:' + activeFg : 'background:transparent;color:#A7A3BC') };
+      }),
+      scrub: function (e) {
+        var r = e.currentTarget.getBoundingClientRect();
+        var x = (e.clientX - r.left) / r.width * W;
+        var i = Math.max(0, Math.min(n - 1, Math.round(x / xMax * (n - 1))));
+        if (i !== self.state.hover) self.setState({ hover: i });
+      },
+      endScrub: function () { self.setState({ hover: null }); },
+      endScrubTouch: function (e) { if (e.pointerType !== 'mouse') self.setState({ hover: null }); }
+    };
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var palettes = [
+      { label: 'Orchid', c1: '#F0A9DC', c2: '#8E9BF0' },
+      { label: 'Lagoon', c1: '#9FD9E6', c2: '#4757C4' },
+      { label: 'Violet', c1: '#F6C8FF', c2: '#9C72EE' },
+      { label: 'Dawn', c1: '#FFD2B0', c2: '#E58FD0' }
+    ];
+    var frames = ['No frame', 'Ring', 'Gem frame'];
+    var auras = ['No aura', 'Halo', 'Sparkles'];
+    var pal = palettes[s.color];
+    var tabs = ['Color', 'Frame', 'Aura'].map(function (k) {
+      var on = k === s.tab;
+      return {
+        label: k,
+        selected: on ? 'true' : 'false',
+        pick: function () { self.setState({ tab: k }); },
+        style: 'height:36px;border:0;border-radius:999px;cursor:pointer;font-size:13.5px;font-weight:600;' + (on ? 'background:#2A2842;color:#F5F3FB' : 'background:transparent;color:#A7A3BC')
+      };
+    });
+    var ring = 'width:52px;height:52px;border-radius:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#0F0F18;';
+    var options;
+    if (s.tab === 'Color') {
+      options = palettes.map(function (p, i) {
+        var on = i === s.color;
+        return { label: p.label, pressed: on ? 'true' : 'false', pick: function () { self.setState({ color: i }); }, style: ring + (on ? 'border:2px solid #F5F3FB' : 'border:2px solid #23233A'), swatch: 'width:34px;height:34px;border-radius:17px;background:linear-gradient(135deg,' + p.c1 + ',' + p.c2 + ')' };
+      });
+    } else if (s.tab === 'Frame') {
+      options = frames.map(function (f, i) {
+        var on = i === s.frame;
+        var sw = i === 0 ? 'width:26px;height:26px;border-radius:13px;border:2px dashed #4A4766' : (i === 1 ? 'width:28px;height:28px;border-radius:14px;border:3px solid ' + pal.c2 : 'width:22px;height:22px;transform:rotate(45deg);border:3px solid ' + pal.c1 + ';border-radius:3px');
+        return { label: f, pressed: on ? 'true' : 'false', pick: function () { self.setState({ frame: i }); }, style: ring + (on ? 'border:2px solid #F5F3FB' : 'border:2px solid #23233A'), swatch: 'box-sizing:border-box;' + sw };
+      });
+    } else {
+      options = auras.map(function (a, i) {
+        var on = i === s.aura;
+        var sw = i === 0 ? 'width:26px;height:26px;border-radius:13px;border:2px dashed #4A4766' : (i === 1 ? 'width:30px;height:30px;border-radius:15px;border:2px dotted ' + pal.c1 : 'width:10px;height:10px;transform:rotate(45deg);background:#FFFFFF;box-shadow:12px -6px 0 -2px #FFFFFF,-10px 8px 0 -3px #FFFFFF');
+        return { label: a, pressed: on ? 'true' : 'false', pick: function () { self.setState({ aura: i }); }, style: ring + (on ? 'border:2px solid #F5F3FB' : 'border:2px solid #23233A'), swatch: 'box-sizing:border-box;' + sw };
+      });
+    }
+    var pillUp = 'padding:7px 11px;border-radius:999px;background:#79E2D6;color:#0B0B14;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums';
+    var pillDown = 'padding:7px 11px;border-radius:999px;background:#FF9A85;color:#0B0B14;font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums';
+    return Object.assign(this.chartVals(), {
+      av: { c1: pal.c1, c2: pal.c2, ring: s.frame === 1 ? 1 : 0, gem: s.frame === 2 ? 1 : 0, halo: s.aura === 1 ? 0.9 : 0, sparkle: s.aura === 2 ? 0.95 : 0 },
+      tabs: tabs,
+      editing: s.editing,
+      openEditor: function () { self.setState({ editing: true }); },
+      closeEditor: function () { self.setState({ editing: false }); },
+      options: options,
+      rating: s.rating.toLocaleString('en-US'),
+      rp: s.rp,
+      toGo: 100 - s.rp,
+      matches: [
+        { game: 'Gut Check', detail: 'Today · fooled the AI on 6 of 7', delta: '+24 RP', pill: pillUp },
+        { game: 'Breach', detail: 'Yesterday · placed #4 of 100', delta: '+31 RP', pill: pillUp },
+        { game: 'Gut Check', detail: 'Fri · fooled the AI on 2 of 7', delta: '−8 RP', pill: pillDown }
+      ]
+    });
+  }
+}
+</script>
+</body>
+</html>

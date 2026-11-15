@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gut Check round</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+a{color:#D9CCFF;text-decoration:none}a:hover{color:#FFFFFF}
+button,input{font-family:inherit}
+input::placeholder{color:#8F8BA6}
+.seal{animation:breathe 2.4s ease-in-out infinite}
+.flip{animation:flip .6s cubic-bezier(.2,.9,.3,1.2)}
+.grow{transform-origin:left;animation:grow .9s cubic-bezier(.2,.8,.2,1)}
+.rise{animation:rise .45s ease-out}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 1px #3A3266, 0 0 24px rgba(185,166,255,0.10)}50%{box-shadow:0 0 0 1px #5B4FA0, 0 0 36px rgba(185,166,255,0.28)}}
+@keyframes flip{from{transform:rotateX(80deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="width:390px;height:1000px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;display:flex;flex-direction:column;overflow:hidden">
+
+  <header style="display:flex;align-items:center;gap:12px;padding:54px 12px 0 12px">
+    <a href="Main.dc.html" aria-label="Quit round" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#F5F3FB;flex:none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+    <div role="progressbar" aria-label="Prompt 3 of 7" aria-valuemin="1" aria-valuemax="7" aria-valuenow="3" style="flex:1;display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:4px">
+      <span style="height:5px;border-radius:3px;background:#79E2D6"></span>
+      <span style="height:5px;border-radius:3px;background:#FF9A85"></span>
+      <span style="height:5px;border-radius:3px;background:#D9CCFF"></span>
+      <span style="height:5px;border-radius:3px;background:#26263A"></span>
+      <span style="height:5px;border-radius:3px;background:#26263A"></span>
+      <span style="height:5px;border-radius:3px;background:#26263A"></span>
+      <span style="height:5px;border-radius:3px;background:#26263A"></span>
+    </div>
+    <span style="flex:none;margin-right:8px;padding:6px 10px;border-radius:999px;background:#15151F;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:#F5F3FB">{{clock}}</span>
+  </header>
+
+  <div style="padding:22px 20px 0;display:flex;flex-direction:column;gap:6px">
+    <span style="font-size:13px;font-weight:700;letter-spacing:0.6px;color:#B9A6FF">GUT CHECK · 3 OF 7</span>
+    <h1 style="margin:0;font-family:'Space Grotesk', Inter, sans-serif;font-size:31px;line-height:1.12;font-weight:700;letter-spacing:-0.6px;text-wrap:balance">What would you want to eat at 2am?</h1>
+  </div>
+
+  <sc-if value="{{answering}}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:16px;padding:22px 20px 0">
+      <div class="seal" style="border-radius:22px;background:#15132A;padding:18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:38px;height:38px;border-radius:12px;background:#2A2342;display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D9CCFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+          </span>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:15px;font-weight:700">The AI locked in its guess</span>
+            <span style="font-size:12.5px;color:#A7A3BC">It's read your last 41 answers. Revealed after you lock in.</span>
+          </div>
+        </div>
+        <div aria-hidden="true" style="display:flex;flex-direction:column;gap:8px;filter:blur(5px)">
+          <span style="height:14px;width:62%;border-radius:7px;background:#4A4380"></span>
+          <span style="height:14px;width:38%;border-radius:7px;background:#3A3366"></span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label for="gut-answer" style="font-size:13px;font-weight:600;color:#A7A3BC">Your answer</label>
+        <input id="gut-answer" type="text" value="{{answer}}" onChange="{{onType}}" placeholder="Say the first thing you'd actually want" autocomplete="off" style="height:58px;padding:0 18px;border-radius:18px;border:1.5px solid #3A3852;background:#12121C;color:#F5F3FB;font-size:17px;font-weight:500;outline:none">
+        <span style="font-size:12.5px;color:#8F8BA6">Be honest. Weird but real beats random.</span>
+      </div>
+
+      <button type="button" onClick="{{lockIn}}" style="height:56px;border:0;border-radius:999px;background:linear-gradient(100deg,#F0A9DC,#B9A6FF 55%,#9FD9E6);color:#141120;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px">Lock in</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{revealed}}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px 0">
+      <div class="flip" style="{{verdictBox}}">
+        <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:22px;font-weight:700">{{verdict}}</span>
+        <span style="font-size:14px;font-weight:600">{{reward}}</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px">
+        <div class="rise" style="padding:14px;border-radius:18px;background:#15151F;border:1px solid #23233A;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;font-weight:700;letter-spacing:0.5px;color:#A7A3BC">YOU SAID</span>
+          <span style="font-size:17px;font-weight:700;line-height:1.25">{{yourAnswer}}</span>
+        </div>
+        <div class="rise" style="padding:14px;border-radius:18px;background:#15151F;border:1px solid #23233A;display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:12px;font-weight:700;letter-spacing:0.5px;color:#A7A3BC">AI GUESSED</span>
+          <span style="font-size:17px;font-weight:700;line-height:1.25">Pizza</span>
+        </div>
+      </div>
+
+      <section aria-label="How everyone answered" style="padding:16px;border-radius:20px;background:#13131D;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:15px;font-weight:700">How 2,184 players answered</span>
+          <span style="font-size:12.5px;color:#A7A3BC">live</span>
+        </div>
+        <sc-for list="{{dist}}" as="d" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;justify-content:space-between;font-size:13.5px">
+              <span style="{{d.labelStyle}}">{{d.label}}</span>
+              <span style="font-weight:600;font-variant-numeric:tabular-nums;color:#BDB9D0">{{d.pct}}</span>
+            </div>
+            <div style="height:8px;border-radius:4px;background:#1E1E2E;overflow:hidden">
+              <div class="grow" style="{{d.bar}}"></div>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:2px 4px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A7A3BC" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 8h.01M11 12h1v5h1"></path></svg>
+        <span style="font-size:12.5px;line-height:1.45;color:#A7A3BC">Rare answers get checked by 3 other players before the points unlock. That's what keeps the data real.</span>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button type="button" onClick="{{reset}}" style="flex:1;height:54px;border-radius:999px;border:1.5px solid #34324A;background:transparent;color:#F5F3FB;font-size:16px;font-weight:700;cursor:pointer">Try again</button>
+        <button type="button" onClick="{{reset}}" style="flex:1.4;height:54px;border:0;border-radius:999px;background:#F5F3FB;color:#141120;font-size:16px;font-weight:700;cursor:pointer">Next prompt</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="flex:1"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { phase: 'answer', answer: 'Cold leftover dumplings', seconds: 14 };
+  }
+  componentDidMount() {
+    var self = this;
+    this.timer = setInterval(function () {
+      if (self.state.phase === 'answer') {
+        self.setState({ seconds: self.state.seconds > 0 ? self.state.seconds - 1 : 15 });
+      }
+    }, 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var raw = (s.answer || '').trim();
+    var ans = raw || 'Cold leftover dumplings';
+    var low = ans.toLowerCase();
+    var predicted = low.indexOf('pizza') !== -1;
+    var base = predicted ? 0 : 120;
+    var rows = [
+      { label: 'Pizza', pct: 31, ai: true },
+      { label: 'Ramen / instant noodles', pct: 14 },
+      { label: 'Cereal', pct: 9 },
+      { label: 'Fries or fast food', pct: 8 },
+      { label: 'Ice cream', pct: 6 }
+    ];
+    var dist = rows.map(function (r) {
+      var mine = predicted && r.ai;
+      return {
+        label: r.label + (r.ai ? '  ·  AI pick' : '') + (mine ? '  ·  you' : ''),
+        pct: r.pct + '%',
+        labelStyle: mine ? 'font-weight:700;color:#FF9A85' : (r.ai ? 'font-weight:600;color:#D9CCFF' : 'color:#E6E2F5'),
+        bar: 'height:100%;width:' + r.pct * 2.6 + '%;border-radius:4px;background:' + (mine ? '#FF9A85' : (r.ai ? '#8E9BF0' : '#4A4766'))
+      };
+    });
+    if (!predicted) {
+      dist.push({
+        label: '“' + ans + '”  ·  you',
+        pct: '0.4%',
+        labelStyle: 'font-weight:700;color:#79E2D6',
+        bar: 'height:100%;width:3%;border-radius:4px;background:#79E2D6'
+      });
+    }
+    return {
+      answering: s.phase === 'answer',
+      revealed: s.phase === 'reveal',
+      answer: s.answer,
+      clock: '0:' + (s.seconds < 10 ? '0' : '') + s.seconds,
+      onType: function (e) { self.setState({ answer: e.target.value }); },
+      lockIn: function () { self.setState({ phase: 'reveal' }); },
+      reset: function () { self.setState({ phase: 'answer', seconds: 15 }); },
+      yourAnswer: ans,
+      verdict: predicted ? 'It predicted you' : 'You fooled the AI',
+      reward: predicted ? '+0 pts · −4 RP' : '+' + base + ' × 1.4 = +' + Math.round(base * 1.4) + ' pts · +6 RP',
+      verdictBox: 'padding:16px 18px;border-radius:20px;display:flex;flex-direction:column;gap:4px;' + (predicted ? 'background:#3A1F1C;color:#FFC4B8' : 'background:#123532;color:#A9F2E8'),
+      dist: dist
+    };
+  }
+}
+</script>
+</body>
+</html>

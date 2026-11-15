@@ -7,7 +7,7 @@ import { winCheckType } from "./tables";
 import { adapterLabel, readModelSettings } from "./bossAdapters";
 import { compileWinRegex } from "./evaluator";
 
-export const OUTER_RING = 3;
+export const START_RING = 2;
 const MAX_PLAYERS = 8;
 const PENDING_TIMEOUT_MS = 60_000;
 
@@ -51,7 +51,7 @@ async function startNewRound(ctx: MutationCtx, room: Doc<"jbRooms">) {
   for await (const player of ctx.db
     .query("jbPlayers")
     .withIndex("by_roomId", (q) => q.eq("roomId", room._id))) {
-    await ctx.db.patch("jbPlayers", player._id, { ring: OUTER_RING });
+    await ctx.db.patch("jbPlayers", player._id, { ring: START_RING });
   }
 }
 
@@ -92,7 +92,7 @@ export const joinRoom = mutation({
       roomId: room._id,
       playerId: args.playerId,
       name,
-      ring: OUTER_RING,
+      ring: START_RING,
       slot,
       chatEpoch: 0,
       lastSeen: Date.now(),

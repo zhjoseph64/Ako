@@ -27,11 +27,16 @@ export function getPlayerId() {
 }
 
 export function getSavedName() {
-  return webStorage("localStorage")?.getItem(NAME_KEY) ?? memoryName;
+  return (
+    webStorage("sessionStorage")?.getItem(NAME_KEY) ??
+    webStorage("localStorage")?.getItem(NAME_KEY) ??
+    memoryName
+  );
 }
 
 export function saveName(name: string) {
   memoryName = name;
+  webStorage("sessionStorage")?.setItem(NAME_KEY, name);
   webStorage("localStorage")?.setItem(NAME_KEY, name);
 }
 

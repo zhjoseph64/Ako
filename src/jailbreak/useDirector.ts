@@ -10,9 +10,9 @@ export type Fireball = { id: string; playerId: string };
 export type ResultLabel = { key: number; text: string; outcome: "held" | "partial" | "full" | "error" };
 export type BossBubble = { key: number; text: string; to: string };
 
-const BUBBLE_MS = 1300;
+const BUBBLE_MS = 1600;
 const FLIGHT_MS = 650;
-const STALE_MS = 20_000;
+const MAX_QUEUED = 3;
 
 export function useDirector(attacks: Attack[] | undefined, room: Room | undefined) {
   const [launches, setLaunches] = useState<Launch[]>([]);
@@ -103,6 +103,11 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
         queue.current.push({ ...attack });
       }
     }
+    while (queue.current.length > MAX_QUEUED) {
+      const skipped = queue.current.shift()!;
+      reacted.current.add(skipped._id);
+      setReactedIds(new Set(reacted.current));
+    }
     if (busy.current) return;
     const next = queue.current.shift();
     if (next) react(next);
@@ -130,13 +135,6 @@ export function useDirector(attacks: Attack[] | undefined, room: Room | undefine
     for (const attack of attacks) {
       if (seen.current.has(attack._id)) continue;
       seen.current.add(attack._id);
-      if (Date.now() - attack._creationTime > STALE_MS) {
-        landed.current.add(attack._id);
-        reacted.current.add(attack._id);
-        setReactedIds(new Set(reacted.current));
-        setLandedIds(new Set(landed.current));
-        continue;
-      }
       const launch = { id: attack._id, playerId: attack.playerId, text: attack.prompt };
       setHolds((current) => ({ ...current, [attack.playerId]: attack.ringBefore }));
       setLaunches((current) => [...current, launch]);

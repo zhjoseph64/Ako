@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wallet and cash out</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+a{color:#D9CCFF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit}
+.sheet{animation:rise .32s cubic-bezier(.2,.8,.2,1)}
+.pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes rise{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<div style="width:390px;height:1300px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:54px 12px 0">
+    <a href="Main.dc.html" aria-label="Back to home" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#F5F3FB">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+    <span style="font-size:16px;font-weight:600">Wallet</span>
+    <span style="width:44px"></span>
+  </header>
+
+  <section aria-label="Cash balance" style="padding:18px 20px 0;display:flex;flex-direction:column;gap:4px">
+    <span style="font-size:15px;color:#A7A3BC;font-weight:500">Cash available</span>
+    <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:50px;font-weight:600;letter-spacing:-1.6px;line-height:1.05;font-variant-numeric:tabular-nums">{{balance}}</span>
+    <span style="font-size:14.5px;color:#A7A3BC">{{balanceNote}}</span>
+  </section>
+
+  <div style="display:flex;gap:10px;padding:20px 20px 0">
+    <button type="button" onClick="{{openSheet}}" style="flex:1;height:52px;border:0;border-radius:999px;background:linear-gradient(100deg,#F0A9DC,#B9A6FF 55%,#9FD9E6);color:#141120;font-size:16px;font-weight:700;cursor:pointer">Cash out</button>
+    <a href="Ranks.dc.html" style="flex:1;height:52px;border-radius:999px;background:#1B1A2B;color:#F5F3FB;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center">Boost earnings</a>
+  </div>
+
+  <section aria-label="Pending" style="margin:22px 20px 0;padding:14px 16px;border-radius:18px;background:#15151F;border:1px solid #23233A;display:flex;align-items:center;gap:12px">
+    <div style="width:40px;height:40px;border-radius:20px;background:#22213A;display:flex;align-items:center;justify-content:center;flex:none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D9CCFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:14.5px;font-weight:600">1,240 pts in review</span>
+      <span style="font-size:12.5px;color:#A7A3BC">Other players verify your answers. Unlocks within 24h.</span>
+    </div>
+    <span style="font-size:14px;font-weight:600;color:#A7A3BC">$12.40</span>
+  </section>
+
+  <section aria-label="This month" style="margin:12px 20px 0;padding:14px 16px;border-radius:18px;background:#15151F;display:flex;align-items:center;gap:12px">
+    <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:13px;color:#A7A3BC">Earned in November</span>
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:22px;font-weight:600">$69.20</span>
+    </div>
+    <svg width="120" height="40" viewBox="0 0 120 40" role="img" aria-label="Earnings up this month">
+      <path d="M0 34 L12 30 L24 32 L36 24 L48 26 L60 18 L72 20 L84 12 L96 14 L108 6 L120 8" fill="none" stroke="#79E2D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+  </section>
+
+  <section aria-label="Activity" style="padding:24px 20px 0;display:flex;flex-direction:column">
+    <h2 style="margin:0 0 4px;font-family:'Space Grotesk', Inter, sans-serif;font-size:19px;font-weight:600">Activity</h2>
+    <sc-for list="{{activity}}" as="a" hint-placeholder-count="5">
+      <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #1E1E2E">
+        <div style="flex:1;display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:15px;font-weight:600">{{a.title}}</span>
+          <span style="font-size:13px;color:#A7A3BC">{{a.detail}}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+          <span style="{{a.amountStyle}}">{{a.amount}}</span>
+          <span style="font-size:12px;color:#8F8BA6">{{a.pts}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="flex:1"></div>
+
+  <nav aria-label="Main" style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));padding:10px 6px 30px;border-top:1px solid #1E1E2E;background:#0B0B14">
+    <a href="Main.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+    <a href="GutCheck.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5.5"></rect><path d="M7.5 10.5v4M5.5 12.5h4"></path><circle cx="16" cy="11.5" r="0.9" fill="currentColor"></circle><circle cx="17.5" cy="14" r="0.9" fill="currentColor"></circle></svg>Play</a>
+    <a href="Leaderboard.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>Ranks</a>
+    <a href="Wallet.dc.html" aria-current="page" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#F5F3FB;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"></rect><path d="M3 10h18M16 15h2"></path><path d="M6 6V5a2 2 0 0 1 2-2h9"></path></svg>Wallet</a>
+    <a href="Profile.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Profile</a>
+  </nav>
+
+  <sc-if value="{{sheetOpen}}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:rgba(5,5,10,0.72)"><div style="height:844px;display:flex;flex-direction:column;justify-content:flex-end">
+      <button type="button" aria-label="Close" onClick="{{closeSheet}}" style="flex:1;border:0;background:transparent;cursor:pointer"></button>
+      <div class="sheet" role="dialog" aria-label="Cash out" style="background:#15151F;border-radius:28px 28px 0 0;padding:12px 20px 36px;display:flex;flex-direction:column;gap:16px;border-top:1px solid #2A2840">
+        <div style="align-self:center;width:40px;height:5px;border-radius:3px;background:#3A3852"></div>
+
+        <sc-if value="{{showForm}}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:22px;font-weight:600">Cash out</span>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0">
+              <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:54px;font-weight:600;letter-spacing:-1.6px;font-variant-numeric:tabular-nums">{{amountLabel}}</span>
+              <span style="font-size:13.5px;color:#A7A3BC">{{amountPts}}</span>
+            </div>
+            <div role="group" aria-label="Amount" style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px">
+              <sc-for list="{{amounts}}" as="m" hint-placeholder-count="3">
+                <button type="button" onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="{{m.style}}">{{m.label}}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13px;color:#A7A3BC;font-weight:600">Send to</span>
+              <sc-for list="{{methods}}" as="w" hint-placeholder-count="2">
+                <button type="button" onClick="{{w.pick}}" aria-pressed="{{w.pressed}}" style="{{w.style}}">
+                  <span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
+                    <span style="font-size:15px;font-weight:600;color:#F5F3FB">{{w.name}}</span>
+                    <span style="font-size:12.5px;color:#A7A3BC">{{w.detail}}</span>
+                  </span>
+                  <span style="{{w.dot}}"></span>
+                </button>
+              </sc-for>
+            </div>
+            <button type="button" onClick="{{confirm}}" style="height:54px;border:0;border-radius:999px;background:#F5F3FB;color:#141120;font-size:16px;font-weight:700;cursor:pointer">Confirm {{amountLabel}}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{showDone}}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0 4px;text-align:center">
+            <div class="pop" style="width:76px;height:76px;border-radius:38px;background:#173A38;display:flex;align-items:center;justify-content:center">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#79E2D6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+            </div>
+            <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:24px;font-weight:600">{{amountLabel}} is on its way</span>
+            <span style="font-size:14.5px;color:#BDB9D0">Sent to {{methodName}}. Arrives in 1–2 business days.</span>
+            <button type="button" onClick="{{closeSheet}}" style="margin-top:8px;width:100%;height:52px;border:0;border-radius:999px;background:#1F1E30;color:#F5F3FB;font-size:16px;font-weight:700;cursor:pointer">Done</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sheet: false, done: false, amount: 2, method: 0, cashed: 0 };
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var available = 124.80 - s.cashed;
+    var opts = [25, 50, available];
+    var labels = ['$25', '$50', 'All'];
+    var amt = opts[s.amount];
+    var fmt = function (n) { return '$' + n.toFixed(2); };
+    var methodsData = [
+      { name: 'Bank account', detail: 'Checking ••• 4821 · free' },
+      { name: 'Instant to debit card', detail: 'Visa ••• 0917 · 1.5% fee' }
+    ];
+    var up = 'font-size:15px;font-weight:700;color:#79E2D6;font-variant-numeric:tabular-nums';
+    var plain = 'font-size:15px;font-weight:700;color:#F5F3FB;font-variant-numeric:tabular-nums';
+    return {
+      balance: fmt(available),
+      balanceNote: Math.round(available * 100).toLocaleString('en-US') + ' pts · 100 pts = $1',
+      sheetOpen: s.sheet,
+      showForm: !s.done,
+      showDone: s.done,
+      openSheet: function () { self.setState({ sheet: true, done: false, amount: 2 }); },
+      closeSheet: function () { self.setState({ sheet: false, done: false }); },
+      confirm: function () { self.setState({ done: true, cashed: s.cashed + amt }); },
+      amountLabel: fmt(amt),
+      amountPts: Math.round(amt * 100).toLocaleString('en-US') + ' pts',
+      methodName: methodsData[s.method].name.toLowerCase(),
+      amounts: labels.map(function (l, i) {
+        var on = i === s.amount;
+        return { label: l, pressed: on ? 'true' : 'false', pick: function () { self.setState({ amount: i }); }, style: 'height:46px;border-radius:999px;cursor:pointer;font-size:15px;font-weight:700;' + (on ? 'background:#D9CCFF;color:#141120;border:0' : 'background:transparent;color:#F5F3FB;border:1.5px solid #34324A') };
+      }),
+      methods: methodsData.map(function (m, i) {
+        var on = i === s.method;
+        return {
+          name: m.name, detail: m.detail,
+          pressed: on ? 'true' : 'false',
+          pick: function () { self.setState({ method: i }); },
+          style: 'display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:16px;cursor:pointer;text-align:left;min-height:56px;' + (on ? 'background:#1F1E33;border:1.5px solid #8E9BF0' : 'background:#0F0F18;border:1.5px solid #23233A'),
+          dot: 'width:20px;height:20px;border-radius:10px;box-sizing:border-box;' + (on ? 'border:6px solid #8E9BF0;background:#F5F3FB' : 'border:2px solid #4A4766')
+        };
+      }),
+      activity: [
+        { title: 'Gut Check', detail: 'Today · 7 rounds · 1.4x rank bonus', amount: '+$5.88', pts: '588 pts', amountStyle: up },
+        { title: 'Breach', detail: 'Yesterday · placed #4 of 100', amount: '+$3.10', pts: '310 pts', amountStyle: up },
+        { title: 'Weekly leaderboard', detail: 'Nov 9 · finished #22', amount: '+$10.00', pts: '1,000 pts', amountStyle: up },
+        { title: 'Cash out', detail: 'Nov 8 · bank ••• 4821', amount: '−$50.00', pts: '5,000 pts', amountStyle: plain },
+        { title: 'Labels verified', detail: 'Nov 7 · 96 answers confirmed', amount: '+$4.32', pts: '432 pts', amountStyle: up }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

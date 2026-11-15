@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0B14}
+a{color:#D9CCFF;text-decoration:none}a:hover{color:#FFFFFF}
+button{font-family:inherit}
+.live-pip{animation:pip 1.6s ease-in-out infinite}
+.bglow{animation:bpulse 2.8s ease-in-out infinite}
+.orbit{transform-origin:175px 54px;animation:orbit 14s linear infinite}
+@keyframes pip{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes bpulse{0%,100%{opacity:.3}50%{opacity:.75}}
+@keyframes orbit{to{transform:rotate(360deg)}}
+.tile:hover .thumb{transform:scale(1.02)}
+.thumb{transition:transform .2s ease}
+</style>
+</helmet>
+<div style="width:390px;height:1370px;box-sizing:border-box;background:#0B0B14;color:#F5F3FB;font-family:Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;display:flex;flex-direction:column;overflow:hidden">
+
+  <header style="display:flex;align-items:center;justify-content:space-between;padding:56px 16px 4px 20px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L21 12 L12 22 L3 12 Z" fill="#C9B8FF"></path><path d="M12 2 L21 12 H3 Z" fill="#F0B3E2"></path></svg>
+      <span style="font-family:'Space Grotesk', Inter, sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.2px">[APP NAME]</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <button type="button" aria-label="Search games" style="width:44px;height:44px;border-radius:22px;border:0;background:transparent;color:#F5F3FB;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      </button>
+      <a href="Wallet.dc.html" aria-label="Points balance 12,480, open wallet" style="height:36px;padding:0 12px 0 8px;border-radius:999px;background:#17162A;border:1px solid #2A2840;display:flex;align-items:center;gap:6px;color:#F5F3FB;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L21 12 L12 22 L3 12 Z" fill="#79E2D6"></path><path d="M12 2 L21 12 H3 Z" fill="#B6F2F0"></path></svg>12,480
+      </a>
+      <button type="button" aria-label="Notifications, 3 new" style="position:relative;width:44px;height:44px;border-radius:22px;border:0;background:transparent;color:#F5F3FB;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9"></path><path d="M10 20a2.2 2.2 0 0 0 4 0"></path></svg>
+        <span style="position:absolute;top:6px;right:5px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#F0A9DC;color:#141120;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">3</span>
+      </button>
+    </div>
+  </header>
+
+  <div role="tablist" aria-label="Browse" style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));margin:6px 20px 0;border-bottom:1px solid #22213A">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+
+  <sc-if value="{{forYou}}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column">
+
+      <a href="Profile.dc.html" style="margin:18px 20px 0;display:flex;align-items:center;gap:12px;color:#F5F3FB">
+        <span style="width:44px;height:44px;border-radius:22px;background:linear-gradient(160deg,#F0A9DC,#8E9BF0);display:flex;align-items:center;justify-content:center;flex:none">
+          <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><rect x="11" y="15" width="5" height="8" rx="2.5" fill="#141120"></rect><rect x="24" y="15" width="5" height="8" rx="2.5" fill="#141120"></rect><path d="M14 28 Q20 32 26 28" fill="none" stroke="#141120" stroke-width="2.4" stroke-linecap="round"></path></svg>
+        </span>
+        <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:24px;font-weight:700;letter-spacing:-0.4px">nova</span>
+        <dc-import name="Badge" tier="variant" division="{{ 2 }}" size="{{ 30 }}" hint-size="30px,30px"></dc-import>
+        <span style="margin-left:auto;padding:5px 10px;border-radius:999px;background:#2A1E22;color:#FFC9A8;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:5px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#FFB38A" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z"></path></svg>12-day streak
+        </span>
+      </a>
+
+
+      <a href="Breach.dc.html" class="tile" aria-label="Breach, live battle royale, starts in 2 minutes 14 seconds" style="margin:18px 20px 0;border-radius:24px;overflow:hidden;background:#111827;border:1px solid #1F2A40;display:flex;flex-direction:column;color:#F5F3FB">
+        <div class="thumb" style="height:168px;position:relative;background:radial-gradient(120% 90% at 50% 40%,#1C2A4A,#0E1322 70%);display:flex;align-items:center;justify-content:center">
+          <svg width="350" height="168" viewBox="0 0 350 108" aria-hidden="true">
+            <g class="orbit">
+              <circle cx="175" cy="10" r="2.6" fill="#F0A9DC"></circle><circle cx="219" cy="54" r="2.6" fill="#79E2D6"></circle><circle cx="175" cy="98" r="2.6" fill="#C9B8FF"></circle><circle cx="131" cy="54" r="2.6" fill="#8E9BF0"></circle>
+              <circle cx="206" cy="23" r="2.2" fill="#9FD9E6"></circle><circle cx="144" cy="85" r="2.2" fill="#F0A9DC"></circle><circle cx="206" cy="85" r="2.2" fill="#C9B8FF"></circle><circle cx="144" cy="23" r="2.2" fill="#79E2D6"></circle>
+            </g>
+            <rect x="145" y="24" width="60" height="60" rx="17" fill="none" stroke="#4B5BC9" stroke-width="1.4"></rect>
+            <rect x="155" y="34" width="40" height="40" rx="12" fill="none" stroke="#6CB8D6" stroke-width="1.4"></rect>
+            <rect x="164" y="43" width="22" height="22" rx="7" fill="#1E2A44" stroke="#79E2D6" stroke-width="1.4"></rect>
+            <circle cx="175" cy="51.5" r="3.2" fill="#79E2D6"></circle>
+            <path d="M175 54 L175 59.5" stroke="#79E2D6" stroke-width="2.6" stroke-linecap="round"></path>
+            <circle cx="40" cy="26" r="2.4" fill="#4A4766"></circle><circle cx="72" cy="78" r="2.4" fill="#4A4766"></circle><circle cx="290" cy="30" r="2.4" fill="#4A4766"></circle><circle cx="314" cy="80" r="2.4" fill="#4A4766"></circle><circle cx="22" cy="64" r="2.4" fill="#4A4766"></circle><circle cx="332" cy="50" r="2.4" fill="#4A4766"></circle>
+          </svg>
+          <span style="position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:rgba(58,30,51,0.92);color:#FFC2E9;font-size:12px;font-weight:700;letter-spacing:0.4px"><span class="live-pip" style="width:7px;height:7px;border-radius:4px;background:#FF8AD0"></span>LIVE LOBBY</span>
+          <span style="position:absolute;top:12px;right:12px;padding:5px 10px;border-radius:999px;background:rgba(11,11,20,0.75);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums">Starts in 02:14</span>
+        </div>
+        <div style="padding:14px 16px 16px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+            <span style="font-family:'Space Grotesk', Inter, sans-serif;font-size:21px;font-weight:700;letter-spacing:-0.3px">Breach</span>
+            <span style="font-size:13px;color:#BDB9D0">Battle royale · 63 of 100 in lobby</span>
+          </div>
+          <span style="padding:12px 18px;border-radius:999px;background:#9FD9E6;color:#0A0D16;font-weight:700;font-size:15px;flex:none">Join</span>
+        </div>
+      </a>
+
+      <section aria-label="Continue playing" style="padding:24px 20px 0;display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-family:'Space Grotesk', Inter, sans-serif;font-size:20px;font-weight:700;letter-spacing:-0.3px">Continue playing</h2>
+        <a href="GutCheck.dc.html" class="tile" style="display:flex;align-items:center;gap:14px;padding:10px;border-radius:20px;background:#15151F;border:1px solid #23233A;color:#F5F3FB">
+          <span class="thumb" style="width:76px;height:76px;border-radius:16px;background:#1B1730;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><path d="M14 22 L22 31 L14 40 L6 31 Z" fill="#C27BD0" opacity="0.8"></path><rect x="20" y="12" width="22" height="38" rx="7" fill="#2A2342" stroke="#C9B8FF" stroke-width="1.4"></rect><rect x="26" y="28" width="10" height="8" rx="2" fill="none" stroke="#F0B3E2" stroke-width="1.6"></rect><path d="M28 28 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke="#F0B3E2" stroke-width="1.6"></path><path d="M48 22 L56 31 L48 40 L40 31 Z" fill="#6CB8D6" opacity="0.8"></path></svg>
+          </span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font-size:16.5px;font-weight:700">Gut Check</span>
+              <span style="font-size:12.5px;color:#A7A3BC">Daily</span>
+            </div>
+            <span style="font-size:13px;color:#BDB9D0">2 of 7 prompts done · AI fooled on 1</span>
+            <div style="display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:3px">
+              <span style="height:5px;border-radius:3px;background:#79E2D6"></span><span style="height:5px;border-radius:3px;background:#FF9A85"></span><span style="height:5px;border-radius:3px;background:#2A2840"></span><span style="height:5px;border-radius:3px;background:#2A2840"></span><span style="height:5px;border-radius:3px;background:#2A2840"></span><span style="height:5px;border-radius:3px;background:#2A2840"></span><span style="height:5px;border-radius:3px;background:#2A2840"></span>
+            </div>
+          </div>
+          <span aria-hidden="true" style="width:40px;height:40px;border-radius:20px;background:linear-gradient(120deg,#F0A9DC,#B9A6FF 60%,#9FD9E6);display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#141120" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"></path></svg>
+          </span>
+        </a>
+      </section>
+
+      <section aria-label="Recommended for you" style="padding:24px 20px 28px;display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-family:'Space Grotesk', Inter, sans-serif;font-size:20px;font-weight:700;letter-spacing:-0.3px">Recommended for you</h2>
+        <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:14px 12px">
+          <sc-for list="{{games}}" as="g" hint-placeholder-count="4">
+            <a href="{{g.href}}" class="tile" style="display:flex;flex-direction:column;gap:7px;color:#F5F3FB">
+              <span class="thumb" style="position:relative;aspect-ratio:1.25;border-radius:18px;overflow:hidden;background:{{g.bg}};display:flex;align-items:center;justify-content:center">
+                <span style="position:absolute;inset:0;display:flex"><dc-import name="GameArt" kind="{{g.kind}}" hint-size="100%,100%"></dc-import></span>
+                <sc-if value="{{g.isNew}}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:999px;background:#F5F3FB;color:#141120;font-size:11px;font-weight:800;letter-spacing:0.3px">NEW</span>
+                </sc-if>
+              </span>
+              <span style="font-size:15px;font-weight:700;line-height:1.2">{{g.title}}</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:#A7A3BC">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"></path></svg>{{g.meta}}
+              </span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{charts}}" hint-placeholder-val="{{ false }}">
+    <section aria-label="Top games" style="padding:16px 20px 0;display:flex;flex-direction:column">
+      <div role="group" aria-label="Sort" style="display:flex;gap:6px;margin-bottom:8px">
+        <span style="padding:7px 12px;border-radius:999px;background:#F5F3FB;color:#141120;font-size:13px;font-weight:700">Most played</span>
+        <span style="padding:7px 12px;border-radius:999px;border:1.5px solid #2A2840;color:#A7A3BC;font-size:13px;font-weight:700">Top paying</span>
+        <span style="padding:7px 12px;border-radius:999px;border:1.5px solid #2A2840;color:#A7A3BC;font-size:13px;font-weight:700">Trending</span>
+      </div>
+      <sc-for list="{{chartRows}}" as="c" hint-placeholder-count="6">
+        <a href="{{c.href}}" style="display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid #1E1E2E;color:#F5F3FB;min-height:44px">
+          <span style="width:20px;font-family:'Space Grotesk', Inter, sans-serif;font-size:17px;font-weight:700;color:#A7A3BC;text-align:center">{{c.rank}}</span>
+          <span style="position:relative;width:64px;height:52px;border-radius:12px;overflow:hidden;flex:none;display:flex;background:{{c.bg}}"><dc-import name="GameArt" kind="{{c.kind}}" hint-size="64px,52px"></dc-import></span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+            <span style="font-size:15px;font-weight:700">{{c.title}}</span>
+            <span style="font-size:12.5px;color:#A7A3BC">{{c.meta}}</span>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#79E2D6">{{c.pay}}</span>
+        </a>
+      </sc-for>
+    </section>
+  </sc-if>
+
+  <div style="flex:1"></div>
+
+  <nav aria-label="Main" style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));padding:10px 6px 30px;border-top:1px solid #1E1E2E;background:#0B0B14">
+    <a href="Main.dc.html" aria-current="page" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#F5F3FB;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"></path></svg>Home</a>
+    <a href="GutCheck.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="19" height="11" rx="5.5"></rect><path d="M7.5 10.5v4M5.5 12.5h4"></path><circle cx="16" cy="11.5" r="0.9" fill="currentColor"></circle><circle cx="17.5" cy="14" r="0.9" fill="currentColor"></circle></svg>Play</a>
+    <a href="Leaderboard.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"></path></svg>Ranks</a>
+    <a href="Wallet.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"></rect><path d="M3 10h18M16 15h2"></path><path d="M6 6V5a2 2 0 0 1 2-2h9"></path></svg>Wallet</a>
+    <a href="Profile.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-height:48px;justify-content:center;color:#8F8BA6;font-size:11px;font-weight:600">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Profile</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1370}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'For you' };
+  }
+  renderVals() {
+    var self = this;
+    var tab = this.state.tab;
+    var art = { gut: 'gut', snap: 'snap', fib: 'fib', crowd: 'crowd', ways: 'ways', breach: 'breach' };
+    var tabs = ['For you', 'Charts'].map(function (k) {
+      var on = k === tab;
+      return { label: k, selected: on ? 'true' : 'false', pick: function () { self.setState({ tab: k }); }, style: 'height:46px;border:0;background:transparent;cursor:pointer;font-size:15.5px;font-weight:700;' + (on ? 'color:#F5F3FB;box-shadow:inset 0 -2.5px 0 #F5F3FB' : 'color:#8F8BA6') };
+    });
+    return {
+      tabs: tabs,
+      forYou: tab === 'For you',
+      charts: tab === 'Charts',
+      games: [
+        { title: 'Gut Check', meta: '2.1k playing', kind: art.gut, bg: '#1B1730', href: 'GutCheck.dc.html', isNew: false },
+        { title: 'Snap the Rare', meta: '890 playing', kind: art.snap, bg: '#1A1424', href: '#', isNew: true },
+        { title: 'Spot the Fib', meta: '1.4k playing', kind: art.fib, bg: '#131B2B', href: '#', isNew: false },
+        { title: 'Crowd Pleaser', meta: '760 playing', kind: art.crowd, bg: '#1E1528', href: '#', isNew: false },
+        { title: 'Two Ways There', meta: '410 playing', kind: art.ways, bg: '#10201F', href: '#', isNew: true },
+        { title: 'Breach', meta: '63 in lobby', kind: art.breach, bg: '#0E1322', href: 'Breach.dc.html', isNew: false }
+      ],
+      chartRows: [
+        { rank: '1', title: 'Gut Check', meta: '2.1k playing · daily', pay: '840 pts', kind: art.gut, bg: '#1B1730', href: 'GutCheck.dc.html' },
+        { rank: '2', title: 'Spot the Fib', meta: '1.4k playing', pay: '500 pts', kind: art.fib, bg: '#131B2B', href: '#' },
+        { rank: '3', title: 'Breach', meta: 'Live every 15 min', pay: '1,200 pts', kind: art.breach, bg: '#0E1322', href: 'Breach.dc.html' },
+        { rank: '4', title: 'Snap the Rare', meta: '890 playing · new', pay: '900 pts', kind: art.snap, bg: '#1A1424', href: '#' },
+        { rank: '5', title: 'Crowd Pleaser', meta: '760 playing', pay: '300 pts', kind: art.crowd, bg: '#1E1528', href: '#' },
+        { rank: '6', title: 'Two Ways There', meta: '410 playing · new', pay: '650 pts', kind: art.ways, bg: '#10201F', href: '#' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

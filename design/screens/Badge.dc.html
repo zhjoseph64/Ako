@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rank badge</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div role="img" aria-label="{{label}} rank badge" style="width:{{size}}px;height:{{size}}px;position:relative;flex:none;color:#F5F3FB;font-family:Inter, sans-serif">
+  <div class="bglow" style="position:absolute;left:22%;top:22%;width:56%;height:56%;border-radius:50%;background:{{glowColor}};filter:blur({{blur}}px);opacity:{{glowOpacity}}"></div>
+  <sc-if value="{{is.echo1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/702f33d8f08fd4698d3d72e9693b4412" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.echo2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/3961bd08429e12d3056639dc26ce4bb5" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.echo3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/ed0f41b8f097e7f63f5f428b14e5af40" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.pattern1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/d9db3a98e3f793bef36fddd03e2ff44e" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.pattern2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/57380557fc85b942a52c1403c4936038" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.pattern3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/8fd99aa89ef5b810fda225ef05a7585b" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.signal1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/69865ab23b3904c54e3872c20089dd3d" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.signal2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/0295ce0e272d04a90428dbdaf43be2a9" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.signal3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/60ebb08bfef4128b50d5bb4bb777fe50" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.variant1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/85fbda9a08fbb13e22831e364d024d51" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.variant2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/0880aa49ee3960901c5f9da4e4fb45fb" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.variant3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/297c87542991f83b3dff8889283d91a8" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.outlier1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/3b541e85168e482e987cecf91734809a" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.outlier2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/36977285c1db21342e752b14420ab199" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.outlier3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/ccb748678d8b0f8e509141a4e45e81b9" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.anomaly1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/b4433029ad990a65ae9f01ecadc70f02" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.anomaly2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/387c6dd3e489cb895c44ef0dfd675ac4" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.anomaly3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/4182c084aca1cab881251129bfe1fad6" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.paradox1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/2824e1ef5621d2ac3ae373cf59ef91fd" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.paradox2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/3c65693a3f5ea3bb06a1b7b3c8a4d6d8" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.paradox3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/a1f2ceacc0fa542ae580de0ab6be366c" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.singular1}}" hint-placeholder-val="{{ false }}"><img src="/_blob/3106670ba74e1e0088174140d911c0da" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.singular2}}" hint-placeholder-val="{{ false }}"><img src="/_blob/5c52a9e0f3bcd6eb1264d1bcfce4d7c1" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+  <sc-if value="{{is.singular3}}" hint-placeholder-val="{{ false }}"><img src="/_blob/2313101a7cd701f05bfa0b5794bb1b76" alt="" style="position:relative;width:100%;height:100%;display:block"></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tier":{"editor":"enum","options":["echo","pattern","signal","variant","outlier","anomaly","paradox","singular"],"default":"singular"},"division":{"editor":"int","min":1,"max":3,"default":3},"size":{"editor":"int","min":16,"max":400,"default":160,"unit":"px"},"glow":{"editor":"boolean","default":true},"$preview":{"width":160,"height":160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var tiers = {
+      echo: { label: 'Echo', glow: '#8FB8D6' },
+      pattern: { label: 'Pattern', glow: '#C79BF0' },
+      signal: { label: 'Signal', glow: '#B08BF2' },
+      variant: { label: 'Variant', glow: '#6CB8C9' },
+      outlier: { label: 'Outlier', glow: '#C08AF0' },
+      anomaly: { label: 'Anomaly', glow: '#B98BF0' },
+      paradox: { label: 'Paradox', glow: '#7F9CF0' },
+      singular: { label: 'Singular', glow: '#79D6E0' }
+    };
+    var key = this.props.tier && tiers[this.props.tier] ? this.props.tier : 'singular';
+    var div = parseInt(this.props.division, 10);
+    if (!(div >= 1 && div <= 3)) div = 3;
+    var size = parseInt(this.props.size, 10);
+    if (!(size > 0)) size = 160;
+    var glow = this.props.glow === true || this.props.glow === 'true';
+    var is = {};
+    Object.keys(tiers).forEach(function (k) {
+      for (var d = 1; d <= 3; d++) is[k + d] = (k === key && d === div);
+    });
+    return {
+      size: size,
+      label: tiers[key].label + ' ' + div,
+      glowColor: tiers[key].glow,
+      blur: Math.max(6, Math.round(size * 0.14)),
+      glowOpacity: glow ? 0.7 : 0,
+      is: is
+    };
+  }
+}
+</script>
+</body>
+</html>

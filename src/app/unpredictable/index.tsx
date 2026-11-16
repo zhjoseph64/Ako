@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import { useDeviceId } from "@/unpredictable/device";
-import { Opponent } from "@/unpredictable/sprite";
+import { Heart, Opponent } from "@/unpredictable/sprite";
 import { fonts, palette, unit } from "@/unpredictable/theme";
 import {
   BackLink,
@@ -26,10 +26,10 @@ import {
 import { api } from "../../../convex/_generated/api";
 
 const RULES = [
-  "6 prompts a day. same for everyone.",
-  "the AI seals 3 guesses before you see one.",
-  "15 seconds. one to four words.",
-  "say what it didn't see coming.",
+  "the squid seals 3 guesses before you see each prompt.",
+  "you have 15 seconds to answer.",
+  "say something it didn't see coming.",
+  "every time it predicts you, you lose a life.",
 ];
 
 export default function UnpredictableHome() {
@@ -68,26 +68,31 @@ export default function UnpredictableHome() {
       >
         <BackLink onPress={() => router.back()} />
         <View style={styles.hero}>
-          <Opponent mood="idle" scale={9} />
-          <Display size={20} style={styles.title}>
+          <Opponent mood="idle" scale={5} />
+          <Display size={19} style={styles.title}>
             UNPREDICTABLE
           </Display>
-          <Display size={9} color={palette.cyan} style={styles.sub}>
-            THE DAILY DUEL
+          <Display size={9} color={palette.cyan}>
+            OUTSMART THE SQUID
           </Display>
         </View>
         <PixelBox>
-          <Body color={palette.cyan} size={20}>
-            how to play
-          </Body>
+          <View style={styles.rulesHead}>
+            <Body color={palette.gold}>HOW TO PLAY</Body>
+            <View style={styles.hearts}>
+              {[0, 1, 2].map((i) => (
+                <Heart key={i} full />
+              ))}
+            </View>
+          </View>
           {RULES.map((rule) => (
-            <Body key={rule} color={palette.dim} size={21}>
+            <Body key={rule} color={palette.dim} size={9} style={styles.rule}>
               {"· " + rule}
             </Body>
           ))}
         </PixelBox>
         <View style={styles.form}>
-          <PixelBox pad={0} color={palette.cyan}>
+          <PixelBox pad={0} color={palette.cyan} fill={palette.deep}>
             <TextInput
               testID="name-input"
               style={styles.input}
@@ -103,7 +108,7 @@ export default function UnpredictableHome() {
           </PixelBox>
           <PixelButton
             testID="play-button"
-            label={busy ? "LOADING..." : "▼ START DUEL ▼"}
+            label={busy ? "DIVING..." : "▼ DIVE IN ▼"}
             disabled={!ready}
             onPress={play}
           />
@@ -117,9 +122,7 @@ export default function UnpredictableHome() {
             <Blink>
               <View style={styles.liveDot} />
             </Blink>
-            <Body color={palette.text} size={24} style={styles.underline}>
-              LIVE ROOM
-            </Body>
+            <Body style={styles.underline}>LIVE ROOM</Body>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -132,24 +135,32 @@ const styles = StyleSheet.create({
   hero: { alignItems: "center", gap: unit * 3 },
   title: {
     textAlign: "center",
-    textShadowColor: palette.cyan,
-    textShadowRadius: 12,
-    textShadowOffset: { width: 0, height: 0 },
+    color: palette.text,
+    textShadowColor: palette.cyanDark,
+    textShadowRadius: 0,
+    textShadowOffset: { width: 3, height: 3 },
   },
-  sub: { letterSpacing: 4 },
+  rulesHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  hearts: { flexDirection: "row", gap: unit },
+  rule: { marginTop: unit * 1.5 },
   form: { gap: unit * 3 },
   input: {
-    fontFamily: fonts.body,
-    fontSize: 28,
+    fontFamily: fonts.pixel,
+    fontSize: 13,
     color: palette.text,
     paddingHorizontal: unit * 3,
-    paddingVertical: unit * 3,
+    paddingVertical: unit * 4,
   },
   liveRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: unit * 2,
+    paddingVertical: unit * 2,
   },
   liveDot: { width: unit * 2, height: unit * 2, backgroundColor: palette.pink },
   underline: { textDecorationLine: "underline" },

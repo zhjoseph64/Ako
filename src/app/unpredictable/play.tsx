@@ -20,11 +20,12 @@ import Animated, {
 
 import { useDeviceId } from "@/unpredictable/device";
 import { Reveal } from "@/unpredictable/reveal";
-import { Opponent } from "@/unpredictable/sprite";
+import { Heart, Opponent } from "@/unpredictable/sprite";
 import { fonts, outcomeColor, palette, unit } from "@/unpredictable/theme";
 import {
   Blink,
   Body,
+  buzz,
   Display,
   Flash,
   PixelBox,
@@ -39,6 +40,8 @@ import { api } from "../../../convex/_generated/api";
 
 const ROUND_SECONDS = 15;
 const ROUND_MS = ROUND_SECONDS * 1000;
+const START_LIVES = 3;
+const SEAL_BEAT_MS = 1900;
 
 function SealSlot(props: { index: number; loop: boolean }) {
   const drop = useSharedValue(0);
@@ -78,13 +81,56 @@ function SealSlot(props: { index: number; loop: boolean }) {
   );
 }
 
+function Life(props: { full: boolean }) {
+  const hit = useSharedValue(0);
+  const wasFull = useRef(props.full);
+  useEffect(() => {
+    if (wasFull.current && !props.full) {
+      hit.value = withSequence(
+        withTiming(1, { duration: 80, easing: Easing.steps(1) }),
+        withRepeat(
+          withSequence(
+            withTiming(0.4, { duration: 90, easing: Easing.steps(1) }),
+            withTiming(1, { duration: 90, easing: Easing.steps(1) }),
+          ),
+          4,
+        ),
+        withTiming(0, { duration: 120, easing: Easing.steps(2) }),
+      );
+    }
+    wasFull.current = props.full;
+  }, [props.full, hit]);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + hit.value * 0.9 }, { translateY: hit.value * 4 }],
+  }));
+  return (
+    <Animated.View style={style}>
+      <Heart full={props.full} />
+    </Animated.View>
+  );
+}
+
+function Lives(props: { lives: number }) {
+  return (
+    <View
+      style={styles.lives}
+      testID="lives"
+      accessibilityLabel={props.lives + " lives"}
+    >
+      {Array.from({ length: START_LIVES }, (_, i) => (
+        <Life key={i} full={i < props.lives} />
+      ))}
+    </View>
+  );
+}
+
 function Countdown(props: { seconds: number }) {
   const tense = props.seconds <= 5;
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (!tense) return;
     pulse.value = withSequence(
-      withTiming(1.5, { duration: 80, easing: Easing.steps(2) }),
+      withTiming(1.2, { duration: 80, easing: Easing.steps(2) }),
       withTiming(1, { duration: 200, easing: Easing.steps(3) }),
     );
     tap();
@@ -101,13 +147,13 @@ function Countdown(props: { seconds: number }) {
             key={i}
             style={[
               styles.segment,
-              { backgroundColor: i < props.seconds ? color : palette.border },
+              { backgroundColor: i < props.seconds ? color : palette.panel },
             ]}
           />
         ))}
       </View>
-      <Animated.View style={style}>
-        <Display size={20} color={color} testID="seconds-left">
+      <Animated.View style={[styles.digits, style]}>
+        <Display size={18} color={color} testID="seconds-left">
           {String(props.seconds).padStart(2, "0")}
         </Display>
       </Animated.View>
@@ -125,14 +171,20 @@ export default function Play() {
   const beginRound = useMutation(api.unpredictable.game.beginRound);
   const submit = useMutation(api.unpredictable.game.submit);
 
-  const rounds = data?.session?.status === "ready" ? data.session.rounds : null;
+  const status = data?.session?.status;
+  const over = status === "over";
+  const rounds =
+    data?.session && (status === "ready" || over) ? data.session.rounds : null;
   const [pinned, setPinned] = useState<number | null>(null);
   const firstOpen = rounds ? rounds.findIndex((r) => r.status !== "done") : -1;
-  const cursor = pinned ?? (firstOpen === -1 ? null : firstOpen);
-  const finished = rounds !== null && pinned === null && firstOpen === -1;
+  const cursor = pinned ?? (firstOpen === -1 || over ? null : firstOpen);
+  const finished =
+    rounds !== null && pinned === null && (firstOpen === -1 || over);
   const [answer, setAnswer] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(ROUND_SECONDS);
   const [flash, setFlash] = useState({ count: 0, color: palette.pink });
+  const [hitShown, setHitShown] = useState<string | null>(null);
+  const [gameOver, setGameOver] = useState(false);
   const answerRef = useRef("");
   const sentFor = useRef<string | null>(null);
   const { style: shakeStyle, shake } = useShake();
@@ -144,6 +196,7 @@ export default function Play() {
   const round = rounds && cursor !== null ? rounds[cursor] : null;
   const roundId = round?._id ?? null;
   const open = round?.status === "open";
+  const sealed = round?.status === "sealed" && !over;
   const startedAt = round?.startedAt ?? null;
 
   const send = (id: NonNullable<typeof roundId>) => {
@@ -153,6 +206,15 @@ export default function Play() {
     thud();
     void submit({ deviceId, roundId: id, answer: answerRef.current });
   };
+
+  useEffect(() => {
+    if (!sealed || !roundId || !deviceId) return;
+    const timer = setTimeout(() => {
+      setPinned(cursor);
+      void beginRound({ deviceId, roundId });
+    }, SEAL_BEAT_MS);
+    return () => clearTimeout(timer);
+  }, [sealed, roundId, deviceId, cursor, beginRound]);
 
   useEffect(() => {
     if (!open || !roundId || startedAt === null) return;
@@ -171,11 +233,11 @@ export default function Play() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, roundId, startedAt]);
 
-  if (!deviceId || data === undefined || !rounds || !round) {
+  if (!deviceId || !data?.session || !rounds || !round) {
     return (
       <Screen>
         <View style={styles.center}>
-          <Opponent mood="thinking" scale={10} />
+          <Opponent mood="thinking" scale={8} />
           <View style={styles.seals}>
             {[0, 1, 2].map((i) => (
               <SealSlot key={i} index={i} loop />
@@ -185,8 +247,8 @@ export default function Play() {
             SEALING GUESSES
           </Display>
           <Blink>
-            <Body color={palette.dim} size={22} style={styles.centerText}>
-              three for every prompt, locked before you see anything...
+            <Body color={palette.dim} size={9} style={styles.centerText}>
+              the squid is reading your mind...
             </Body>
           </Blink>
         </View>
@@ -194,26 +256,74 @@ export default function Play() {
     );
   }
 
+  const hitPending =
+    round.status === "done" &&
+    round.outcome === "predicted" &&
+    hitShown !== round._id;
+  const lives = Math.min(
+    START_LIVES,
+    data.session.lives + (hitPending ? 1 : 0),
+  );
+  const played = rounds.filter((r) => r.outcome !== null).length;
+
+  if (gameOver) {
+    return (
+      <Screen
+        shake={shakeStyle}
+        flash={<Flash color={flash.color} trigger={flash.count} />}
+      >
+        <View style={styles.pad}>
+          <View style={styles.center}>
+            <Opponent mood="smug" scale={8} />
+            <Display
+              size={24}
+              color={palette.pink}
+              style={styles.gameOver}
+              testID="game-over"
+            >
+              GAME OVER
+            </Display>
+            <Lives lives={0} />
+            <Body size={10} style={styles.centerText}>
+              {"the squid got you in " +
+                played +
+                (played === 1 ? " round." : " rounds.")}
+            </Body>
+          </View>
+          <PixelButton
+            testID="see-score"
+            label="SEE MY SCORE ▶"
+            tone="gold"
+            onPress={() => router.replace("/unpredictable/result")}
+          />
+        </View>
+      </Screen>
+    );
+  }
+
   const hud = (
     <View style={styles.hud}>
-      <Display size={9} color={palette.cyan}>
-        {"ROUND " + (round.index + 1) + "/" + rounds.length}
-      </Display>
-      <View style={styles.dots}>
-        {rounds.map((r) => (
-          <View
-            key={r._id}
-            style={[
-              styles.dot,
-              r.outcome !== null && {
-                backgroundColor: outcomeColor[r.outcome],
-              },
-              r.index === round.index &&
-                r.outcome === null && { backgroundColor: palette.text },
-            ]}
-          />
-        ))}
+      <View style={styles.hudLeft}>
+        <Display size={9} color={palette.cyan}>
+          {"ROUND " + (round.index + 1) + "/" + rounds.length}
+        </Display>
+        <View style={styles.dots}>
+          {rounds.map((r) => (
+            <View
+              key={r._id}
+              style={[
+                styles.dot,
+                r.outcome !== null && {
+                  backgroundColor: outcomeColor[r.outcome],
+                },
+                r.index === round.index &&
+                  r.outcome === null && { backgroundColor: palette.text },
+              ]}
+            />
+          ))}
+        </View>
       </View>
+      <Lives lives={lives} />
     </View>
   );
 
@@ -235,8 +345,11 @@ export default function Play() {
             outcome={round.outcome}
             judgeReason={round.judgeReason}
             {...round.reveal}
-            last={last}
+            nextLabel={
+              over ? "CONTINUE ▶" : last ? "SEE MY SCORE ▶" : "NEXT PROMPT ▶"
+            }
             onVerdict={(outcome) => {
+              setHitShown(round._id);
               setFlash((f) => ({
                 count: f.count + 1,
                 color: outcomeColor[outcome],
@@ -244,6 +357,13 @@ export default function Play() {
               shake(outcome === "predicted" ? 14 : 6);
             }}
             onNext={() => {
+              if (over) {
+                setGameOver(true);
+                setFlash((f) => ({ count: f.count + 1, color: palette.pink }));
+                shake(18);
+                buzz("lose");
+                return;
+              }
               if (last) return router.replace("/unpredictable/result");
               answerRef.current = "";
               setAnswer("");
@@ -262,27 +382,21 @@ export default function Play() {
         <View style={styles.pad}>
           {hud}
           <View style={styles.center}>
-            <Opponent mood="idle" scale={10} />
+            <Opponent mood="thinking" scale={8} />
             <View style={styles.seals}>
               {[0, 1, 2].map((i) => (
                 <SealSlot key={round._id + i} index={i} loop={false} />
               ))}
             </View>
-            <Display size={12} style={styles.centerText}>
+            <Display size={12} style={styles.centerText} testID="sealed">
               3 GUESSES SEALED
             </Display>
-            <Body color={palette.dim} size={22} style={styles.centerText}>
-              you get 15 seconds and one to four words.
-            </Body>
+            <Blink ms={250}>
+              <Body color={palette.gold} style={styles.centerText}>
+                GET READY...
+              </Body>
+            </Blink>
           </View>
-          <PixelButton
-            testID="reveal-prompt"
-            label="SHOW PROMPT ▶"
-            onPress={() => {
-              setPinned(cursor);
-              void beginRound({ deviceId, roundId: round._id });
-            }}
-          />
         </View>
       </Screen>
     );
@@ -294,12 +408,12 @@ export default function Play() {
         <View style={styles.pad}>
           {hud}
           <View style={styles.center}>
-            <Opponent mood="thinking" scale={10} />
-            <Body color={palette.dim} size={22} style={styles.centerText}>
+            <Opponent mood="thinking" scale={8} />
+            <Body color={palette.dim} size={9} style={styles.centerText}>
               {round.prompt}
             </Body>
-            <Body size={36} style={styles.centerText}>
-              {"> " + round.answer}
+            <Body size={14} style={styles.centerText}>
+              {"> " + (round.answer || "...")}
             </Body>
             <Blink>
               <Display size={10} color={palette.gold} style={styles.centerText}>
@@ -313,7 +427,8 @@ export default function Play() {
   }
 
   const wordCount = answer.trim().split(/\s+/).filter(Boolean).length;
-  const canSend = wordCount >= 1 && wordCount <= 4;
+  const tooLong = wordCount > 4;
+  const canSend = wordCount >= 1 && !tooLong;
   const tense = secondsLeft <= 5;
 
   return (
@@ -325,12 +440,16 @@ export default function Play() {
         {hud}
         <Countdown seconds={secondsLeft} />
         <PixelBox color={tense ? palette.pink : palette.border}>
-          <Display size={15} testID="prompt-text" style={styles.prompt}>
+          <Display size={13} testID="prompt-text" style={styles.prompt}>
             {round.prompt}
           </Display>
         </PixelBox>
         <View style={styles.gap} />
-        <PixelBox pad={0} color={palette.cyan}>
+        <PixelBox
+          pad={0}
+          color={tooLong ? palette.gold : palette.cyan}
+          fill={palette.deep}
+        >
           <TextInput
             testID="answer-input"
             style={styles.input}
@@ -339,7 +458,7 @@ export default function Play() {
               answerRef.current = text;
               setAnswer(text);
             }}
-            placeholder="one to four words"
+            placeholder="your answer"
             placeholderTextColor={palette.dim}
             autoFocus
             autoCorrect={false}
@@ -349,12 +468,12 @@ export default function Play() {
           />
         </PixelBox>
         <Body
-          color={wordCount > 4 ? palette.pink : palette.dim}
-          size={20}
+          color={tooLong ? palette.gold : palette.dim}
+          size={9}
           style={styles.hint}
         >
-          {wordCount > 4
-            ? "four words at most"
+          {tooLong
+            ? "a little shorter, please. trim a word or two."
             : "no right answer. just don't be obvious."}
         </Body>
         <PixelButton
@@ -377,14 +496,28 @@ const styles = StyleSheet.create({
     gap: unit * 4,
   },
   centerText: { textAlign: "center" },
+  gameOver: {
+    textAlign: "center",
+    textShadowColor: palette.ink,
+    textShadowRadius: 0,
+    textShadowOffset: { width: 4, height: 4 },
+  },
   hud: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: unit * 4,
   },
+  hudLeft: { gap: unit * 2 },
   dots: { flexDirection: "row", gap: unit * 1.5 },
-  dot: { width: unit * 3, height: unit * 3, backgroundColor: palette.border },
+  dot: {
+    width: unit * 3,
+    height: unit * 3,
+    backgroundColor: palette.panel,
+    borderWidth: 1,
+    borderColor: palette.ink,
+  },
+  lives: { flexDirection: "row", gap: unit * 1.5, alignItems: "center" },
   seals: {
     flexDirection: "row",
     gap: unit * 4,
@@ -394,19 +527,26 @@ const styles = StyleSheet.create({
   countdown: {
     flexDirection: "row",
     alignItems: "center",
-    gap: unit * 3,
+    gap: unit * 4,
     marginBottom: unit * 4,
   },
-  segments: { flex: 1, flexDirection: "row", gap: 3 },
-  segment: { flex: 1, height: unit * 4 },
-  prompt: { lineHeight: 26 },
+  segments: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 3,
+    padding: 3,
+    backgroundColor: palette.ink,
+  },
+  segment: { flex: 1, height: unit * 3 },
+  digits: { width: 44, alignItems: "flex-end" },
+  prompt: { lineHeight: 24 },
   gap: { height: unit * 3 },
   input: {
-    fontFamily: fonts.body,
-    fontSize: 32,
+    fontFamily: fonts.pixel,
+    fontSize: 14,
     color: palette.text,
     paddingHorizontal: unit * 3,
-    paddingVertical: unit * 3,
+    paddingVertical: unit * 4,
   },
   hint: { marginVertical: unit * 2 },
 });

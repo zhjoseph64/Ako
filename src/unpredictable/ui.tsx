@@ -20,7 +20,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { fonts, palette, unit } from "@/unpredictable/theme";
+import { fonts, palette, unit, WATER_BANDS } from "@/unpredictable/theme";
 
 export function tap() {
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -40,20 +40,24 @@ export function buzz(kind: "win" | "lose" | "void") {
   void Haptics.notificationAsync(type).catch(() => {});
 }
 
-export function Display(props: {
+type TextProps = {
   children: ReactNode;
   size?: number;
   color?: string;
   style?: StyleProp<TextStyle>;
   testID?: string;
-}) {
+  numberOfLines?: number;
+};
+
+export function Display(props: TextProps) {
   const size = props.size ?? 16;
   return (
     <Text
       testID={props.testID}
+      numberOfLines={props.numberOfLines}
       style={[
         {
-          fontFamily: fonts.display,
+          fontFamily: fonts.pixel,
           fontSize: size,
           lineHeight: Math.round(size * 1.5),
           color: props.color ?? palette.text,
@@ -66,24 +70,17 @@ export function Display(props: {
   );
 }
 
-export function Body(props: {
-  children: ReactNode;
-  size?: number;
-  color?: string;
-  style?: StyleProp<TextStyle>;
-  testID?: string;
-  numberOfLines?: number;
-}) {
-  const size = props.size ?? 22;
+export function Body(props: TextProps) {
+  const size = props.size ?? 10;
   return (
     <Text
       testID={props.testID}
       numberOfLines={props.numberOfLines}
       style={[
         {
-          fontFamily: fonts.body,
+          fontFamily: fonts.pixel,
           fontSize: size,
-          lineHeight: Math.round(size * 1.05),
+          lineHeight: Math.round(size * 1.8),
           color: props.color ?? palette.text,
         },
         props.style,
@@ -98,18 +95,11 @@ export function PixelBox(props: {
   children: ReactNode;
   color?: string;
   fill?: string;
-  shadow?: string;
   style?: StyleProp<ViewStyle>;
   pad?: number;
 }) {
   return (
-    <View style={styles.boxWrap}>
-      <View
-        style={[
-          styles.boxShadow,
-          { backgroundColor: props.shadow ?? palette.shadow },
-        ]}
-      />
+    <View style={styles.boxOuter}>
       <View
         style={[
           styles.box,
@@ -127,15 +117,20 @@ export function PixelBox(props: {
   );
 }
 
+const TONES = {
+  cyan: { face: palette.cyan, shade: palette.cyanDark },
+  gold: { face: palette.gold, shade: palette.goldDark },
+  pink: { face: palette.pink, shade: palette.pinkDark },
+};
+
 export function PixelButton(props: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  color?: string;
-  shadow?: string;
+  tone?: keyof typeof TONES;
   testID?: string;
 }) {
-  const color = props.color ?? palette.cyan;
+  const tone = TONES[props.tone ?? "cyan"];
   return (
     <Pressable
       testID={props.testID}
@@ -144,32 +139,20 @@ export function PixelButton(props: {
       disabled={props.disabled}
       onPressIn={tap}
       onPress={props.onPress}
-      style={[styles.buttonWrap, props.disabled && styles.off]}
+      style={({ pressed }) => [
+        styles.button,
+        {
+          backgroundColor: tone.face,
+          borderBottomColor: tone.shade,
+          borderRightColor: tone.shade,
+          opacity: props.disabled ? 0.45 : 1,
+          transform: [{ translateY: pressed ? 3 : 0 }],
+        },
+      ]}
     >
-      {({ pressed }) => (
-        <>
-          <View
-            style={[
-              styles.buttonShadow,
-              { backgroundColor: props.shadow ?? palette.cyanDark },
-            ]}
-          />
-          <View
-            style={[
-              styles.button,
-              {
-                backgroundColor: color,
-                transform: [{ translateY: pressed ? unit * 1.5 : 0 }],
-              },
-            ]}
-          >
-            <View style={styles.buttonShine} />
-            <Display size={13} color={palette.bg}>
-              {props.label}
-            </Display>
-          </View>
-        </>
-      )}
+      <Display size={12} color={palette.ink} style={styles.buttonText}>
+        {props.label}
+      </Display>
     </Pressable>
   );
 }
@@ -183,11 +166,18 @@ export function BackLink(props: { onPress: () => void }) {
       accessibilityRole="button"
       accessibilityLabel="Back"
     >
-      <Body color={palette.dim} size={22}>
-        {"◀ BACK"}
-      </Body>
+      <Body color={palette.dim}>{"◀ BACK"}</Body>
     </Pressable>
   );
+}
+
+export function useFrame(ms: number, frames: number) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setFrame((f) => (f + 1) % frames), ms);
+    return () => clearInterval(timer);
+  }, [ms, frames]);
+  return frame;
 }
 
 function Bubble(props: {
@@ -207,8 +197,11 @@ function Bubble(props: {
     );
   }, [rise, props.delay, props.duration]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: -rise.value * 900 }],
-    opacity: 0.5 - rise.value * 0.5,
+    transform: [
+      { translateY: -rise.value * 980 },
+      { translateX: Math.round(Math.sin(rise.value * 14) * 2) * unit },
+    ],
+    opacity: rise.value > 0.9 ? 0 : 0.55,
   }));
   return (
     <Animated.View
@@ -217,16 +210,160 @@ function Bubble(props: {
         { left: `${props.left}%`, width: props.size, height: props.size },
         style,
       ]}
+    >
+      <View style={styles.bubbleShine} />
+    </Animated.View>
+  );
+}
+
+const BUBBLES = Array.from({ length: 9 }, (_, i) => ({
+  left: (i * 37 + 11) % 96,
+  size: (2 + (i % 3)) * unit,
+  delay: i * 1100,
+  duration: 9000 + (i % 4) * 2600,
+}));
+
+function Ray(props: { left: number; width: number; delay: number }) {
+  const drift = useSharedValue(0);
+  useEffect(() => {
+    drift.value = withDelay(
+      props.delay,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0, { duration: 7000, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+      ),
+    );
+  }, [drift, props.delay]);
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.04 + drift.value * 0.05,
+    transform: [{ translateX: drift.value * 24 }, { rotate: "16deg" }],
+  }));
+  return (
+    <Animated.View
+      style={[
+        styles.ray,
+        { left: `${props.left}%`, width: props.width },
+        style,
+      ]}
     />
   );
 }
 
-const BUBBLES = Array.from({ length: 10 }, (_, i) => ({
-  left: (i * 37 + 11) % 100,
-  size: i % 3 === 0 ? unit * 2 : unit,
-  delay: i * 900,
-  duration: 9000 + (i % 4) * 2500,
-}));
+const WEEDS = [
+  { left: 3, height: 9 },
+  { left: 12, height: 6 },
+  { left: 22, height: 11 },
+  { left: 71, height: 7 },
+  { left: 82, height: 12 },
+  { left: 92, height: 8 },
+];
+const SWAY = [0, 1, 1, 0, -1, -1];
+
+function Seaweed() {
+  const frame = useFrame(420, SWAY.length);
+  return (
+    <>
+      {WEEDS.map((weed, i) => (
+        <View key={i} style={[styles.weed, { left: `${weed.left}%` }]}>
+          {Array.from({ length: weed.height }, (_, j) => {
+            const level = weed.height - j;
+            const sway =
+              level < 3 ? 0 : SWAY[(frame + level + i) % SWAY.length];
+            return (
+              <View
+                key={j}
+                style={{
+                  width: unit * 2,
+                  height: unit * 2,
+                  backgroundColor:
+                    (j + i) % 2 === 0 ? palette.weed : palette.weedDark,
+                  transform: [{ translateX: sway * unit }],
+                }}
+              />
+            );
+          })}
+        </View>
+      ))}
+    </>
+  );
+}
+
+const FISH = ["..OO..O", ".OFFOOF", "OFKFFFO", ".OFFOOF", "..OO..O"];
+
+function Fish(props: {
+  top: number;
+  duration: number;
+  delay: number;
+  color: string;
+}) {
+  const swim = useSharedValue(0);
+  useEffect(() => {
+    swim.value = withDelay(
+      props.delay,
+      withRepeat(
+        withTiming(1, { duration: props.duration, easing: Easing.linear }),
+        -1,
+      ),
+    );
+  }, [swim, props.delay, props.duration]);
+  const style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: 480 - swim.value * 560 },
+      { translateY: Math.round(Math.sin(swim.value * 20) * 2) * unit },
+    ],
+  }));
+  const colors: Record<string, string> = {
+    O: palette.ink,
+    F: props.color,
+    K: palette.ink,
+  };
+  return (
+    <Animated.View
+      style={[
+        { position: "absolute", top: `${props.top}%`, left: 0, opacity: 0.5 },
+        style,
+      ]}
+    >
+      {FISH.map((row, y) => (
+        <View key={y} style={{ flexDirection: "row" }}>
+          {row.split("").map((cell, x) => (
+            <View
+              key={x}
+              style={{
+                width: 3,
+                height: 3,
+                backgroundColor: cell === "." ? "transparent" : colors[cell],
+              }}
+            />
+          ))}
+        </View>
+      ))}
+    </Animated.View>
+  );
+}
+
+export function Ocean() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {WATER_BANDS.map((color) => (
+        <View key={color} style={{ flex: 1, backgroundColor: color }} />
+      ))}
+      <Ray left={8} width={46} delay={0} />
+      <Ray left={38} width={70} delay={2500} />
+      <Ray left={70} width={34} delay={5000} />
+      <Fish top={22} duration={26000} delay={3000} color={palette.gold} />
+      <Fish top={58} duration={34000} delay={15000} color={palette.pink} />
+      <View style={styles.sand} />
+      <Seaweed />
+      {BUBBLES.map((b, i) => (
+        <Bubble key={i} {...b} />
+      ))}
+    </View>
+  );
+}
 
 export function Screen(props: {
   children: ReactNode;
@@ -235,11 +372,7 @@ export function Screen(props: {
 }) {
   return (
     <View style={styles.screen}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {BUBBLES.map((b, i) => (
-          <Bubble key={i} {...b} />
-        ))}
-      </View>
+      <Ocean />
       <SafeAreaView style={styles.safe}>
         <Animated.View style={[styles.safe, props.shake]}>
           {props.children}
@@ -400,38 +533,42 @@ const styles = StyleSheet.create({
   bubble: {
     position: "absolute",
     bottom: -20,
-    backgroundColor: palette.border,
+    borderWidth: 2,
+    borderColor: "#bdefff",
   },
-  boxWrap: { marginBottom: unit },
-  boxShadow: {
+  bubbleShine: { width: 2, height: 2, backgroundColor: "#ffffff", margin: 1 },
+  ray: {
+    position: "absolute",
+    top: -60,
+    height: "75%",
+    backgroundColor: "#c9f6ff",
+  },
+  sand: {
     position: "absolute",
     left: 0,
     right: 0,
-    top: unit,
-    bottom: -unit,
+    bottom: 0,
+    height: unit * 5,
+    backgroundColor: palette.sand,
+    borderTopWidth: unit,
+    borderTopColor: "#3f5257",
+  },
+  weed: { position: "absolute", bottom: unit * 4, opacity: 0.8 },
+  boxOuter: {
+    borderWidth: 3,
+    borderColor: palette.ink,
+    backgroundColor: palette.ink,
   },
   box: { borderWidth: 3 },
-  buttonWrap: { marginBottom: unit * 1.5 },
-  buttonShadow: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: unit * 1.5,
-    bottom: -unit * 1.5,
-  },
   button: {
-    paddingVertical: unit * 4,
-    alignItems: "center",
+    paddingHorizontal: unit * 3,
+    paddingVertical: unit * 3.5,
     borderWidth: 3,
-    borderColor: palette.bg,
+    borderColor: palette.ink,
+    borderBottomWidth: 6,
+    borderRightWidth: 5,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  buttonShine: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: unit,
-    backgroundColor: "#ffffff55",
-  },
-  off: { opacity: 0.35 },
+  buttonText: { textAlign: "center" },
 });

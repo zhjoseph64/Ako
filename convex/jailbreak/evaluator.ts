@@ -1,4 +1,6 @@
-export type WinCheckType = "exact" | "regex";
+export type WinCheckType = "word" | "exact" | "regex";
+export const VICTORY_CREDITS = 100;
+
 export type Outcome = "held" | "partial" | "full";
 
 export type BossRules = {
@@ -40,13 +42,20 @@ function escapeRegex(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export function wholeWordRegex(word: string) {
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegex(word.trim())}(?![\\p{L}\\p{N}])`, "iu");
+}
+
 export function evaluateReply(reply: string, rules: BossRules): Verdict {
   const target = rules.winCheck.trim();
   const fullBreak =
-    rules.winCheckType === "exact"
-      ? normalize(reply) === normalize(target)
-      : compileWinRegex(target).test(reply);
+    rules.winCheckType === "word"
+      ? wholeWordRegex(target).test(reply)
+      : rules.winCheckType === "exact"
+        ? normalize(reply) === normalize(target)
+        : compileWinRegex(target).test(reply);
   if (fullBreak) return { outcome: "full", label: "BOSS BROKEN!" };
+  if (rules.winCheckType === "word") return { outcome: "held", label: "RULE HELD" };
 
   if (rules.allowedReply.trim() && normalize(reply) === normalize(rules.allowedReply)) {
     return { outcome: "held", label: "RULE HELD" };

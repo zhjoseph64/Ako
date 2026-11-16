@@ -1,14 +1,15 @@
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { defineSchema } from "convex/server";
 
+import { cashoutTables } from "./cashout/tables";
 import { jailbreakTables } from "./jailbreak/tables";
+import { platformTables } from "./platform/tables";
 import { unpredictableTables } from "./unpredictable/tables";
+import { whopTables } from "./whop/tables";
 
 export default defineSchema({
-  counters: defineTable({
-    name: v.string(),
-    value: v.number(),
-  }).index("by_name", ["name"]),
   ...unpredictableTables,
   ...jailbreakTables,
+  ...cashoutTables,
+  ...platformTables,
+  ...whopTables,
 });

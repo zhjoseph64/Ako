@@ -33,7 +33,8 @@ export const jailbreakTables = {
     credits: v.optional(v.number()),
   })
     .index("by_roomId", ["roomId"])
-    .index("by_roomId_and_playerId", ["roomId", "playerId"]),
+    .index("by_roomId_and_playerId", ["roomId", "playerId"])
+    .index("by_playerId", ["playerId"]),
 
   jbAttacks: defineTable({
     roomId: v.id("jbRooms"),

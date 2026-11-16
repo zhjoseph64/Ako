@@ -1,5 +1,9 @@
+import { useEffect } from "react";
 import type { ColorValue } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Path } from "react-native-svg";
+
+import { duration, spring } from "@/motion";
 
 export function PointsGem({ size = 18 }: { size?: number }) {
   return (
@@ -35,10 +39,17 @@ const TAB_PATHS = {
   profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 21a7.5 7.5 0 0 1 15 0",
 };
 
-export function TabIcon({ name, color }: { name: keyof typeof TAB_PATHS; color: ColorValue }) {
+export function TabIcon({ name, color, focused }: { name: keyof typeof TAB_PATHS; color: ColorValue; focused: boolean }) {
+  const scale = useSharedValue(1);
+  useEffect(() => {
+    if (focused) scale.value = withSequence(withTiming(0.82, { duration: duration.press }), withSpring(1, spring.pop));
+  }, [focused, scale]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-      <Path d={TAB_PATHS[name]} />
-    </Svg>
+    <Animated.View style={style}>
+      <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <Path d={TAB_PATHS[name]} />
+      </Svg>
+    </Animated.View>
   );
 }

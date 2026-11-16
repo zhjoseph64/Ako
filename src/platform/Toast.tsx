@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { StyleSheet, Text } from "react-native";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 
+import { duration, easing } from "@/motion";
 import { colors, fonts, radii } from "./theme";
 
 export function Toast({ message, onDone }: { message: string | null; onDone: () => void }) {
@@ -12,7 +13,14 @@ export function Toast({ message, onDone }: { message: string | null; onDone: () 
   }, [message, onDone]);
   if (!message) return null;
   return (
-    <Animated.View entering={FadeInDown} exiting={FadeOutDown} style={styles.toast} pointerEvents="none" testID="toast">
+    <Animated.View
+      entering={FadeInDown.springify().damping(16).stiffness(240)}
+      exiting={FadeOutDown.duration(duration.fast).easing(easing.in)}
+      style={styles.toast}
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+      testID="toast"
+    >
       <Text style={styles.text}>{message}</Text>
     </Animated.View>
   );

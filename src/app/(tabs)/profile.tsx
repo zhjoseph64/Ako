@@ -1,11 +1,12 @@
 import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
+import { Enter, PressableScale, Skeleton, SwipeBlock, TabScene } from "@/motion";
 import { AVATAR_AURAS, AVATAR_FRAMES, AVATAR_PALETTES, Avatar, avatarColors } from "@/platform/Avatar";
 import { PerformanceChart } from "@/platform/PerformanceChart";
 import { RankBadge } from "@/platform/RankBadge";
@@ -91,7 +92,18 @@ export default function Profile() {
   }, [float]);
   const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: float.value }] }));
 
-  if (!me || !deviceId) return <SafeAreaView edges={["top"]} style={styles.screen} testID="profile" />;
+  if (!me || !deviceId) {
+    return (
+      <SafeAreaView edges={["top"]} style={styles.screen} testID="profile">
+        <TabScene style={{ alignItems: "center", gap: 14, paddingTop: 54, paddingHorizontal: 20 }}>
+          <Skeleton width={124} height={124} radius={62} />
+          <Skeleton width={150} height={24} />
+          <Skeleton height={300} radius={26} style={{ marginTop: 14 }} />
+          <Skeleton height={180} radius={22} />
+        </TabScene>
+      </SafeAreaView>
+    );
+  }
 
   const avatar = draft ?? me.avatar;
   const palette = avatarColors(avatar.color);
@@ -118,11 +130,12 @@ export default function Profile() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="profile">
+      <TabScene>
       <ScrollView contentContainerStyle={styles.content}>
         <TopBar
           title="Profile"
           right={
-            <Pressable
+            <PressableScale
               onPress={() => setEditing(true)}
               accessibilityRole="button"
               accessibilityLabel="Edit avatar"
@@ -133,11 +146,11 @@ export default function Profile() {
                 <Path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z" />
                 <Path d="M13.5 6.5l4 4" />
               </Svg>
-            </Pressable>
+            </PressableScale>
           }
         />
 
-        <View style={styles.identity}>
+        <Enter style={styles.identity}>
           <Avatar color={avatar.color} frame={avatar.frame} aura={avatar.aura} size={124} />
           <View style={{ alignItems: "center", gap: 2 }}>
             <Text style={styles.name} testID="profile-name">@{me.name}</Text>
@@ -146,9 +159,9 @@ export default function Profile() {
               {me.streakDays > 0 ? ` · ${me.streakDays}-day streak` : ""}
             </Text>
           </View>
-        </View>
+        </Enter>
 
-        <View style={styles.rankCard} testID="profile-rank-card">
+        <Enter index={1} style={styles.rankCard} testID="profile-rank-card">
           <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
             <Defs>
               <RadialGradient id="rank-glow" cx="50%" cy="50%" r="50%">
@@ -196,7 +209,7 @@ export default function Profile() {
           </View>
 
           {nextTier && (
-            <Pressable style={styles.nextTier} onPress={() => router.push("/ranks")} accessibilityRole="link" testID="profile-next-tier">
+            <PressableScale scale={0.98} style={styles.nextTier} onPress={() => router.push("/ranks")} accessibilityRole="link" testID="profile-next-tier">
               <RankBadge tier={nextTier.key} division={1} size={40} glow={false} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.nextTitle}>Next tier: {nextTier.label}</Text>
@@ -207,13 +220,15 @@ export default function Profile() {
               <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={colors.tertiary} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M9 6l6 6-6 6" />
               </Svg>
-            </Pressable>
+            </PressableScale>
           )}
-        </View>
+        </Enter>
 
-        <View style={{ marginTop: 26 }}>
-          <PerformanceChart deviceId={deviceId} now={now} />
-        </View>
+        <Enter index={2} style={{ marginTop: 26 }}>
+          <SwipeBlock>
+            <PerformanceChart deviceId={deviceId} now={now} />
+          </SwipeBlock>
+        </Enter>
 
         <View style={styles.highlights}>
           <View style={styles.highlight}>
@@ -233,10 +248,10 @@ export default function Profile() {
         <View style={styles.matches}>
           <Text style={styles.sectionTitle}>Recent matches</Text>
           {activity && matches.length === 0 && <Text style={styles.empty}>Play a round and it shows up here.</Text>}
-          {matches.map((match) => {
+          {matches.map((match, index) => {
             const rp = Math.round(match.ratingDelta * RP_PER_RATING);
             return (
-              <View key={match.at} style={styles.match} testID="profile-match">
+              <Enter key={match.at} index={index} style={styles.match} testID="profile-match">
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.matchGame}>{GAME_TITLES[match.game]}</Text>
                   <Text style={styles.matchDetail} numberOfLines={1}>
@@ -250,25 +265,26 @@ export default function Profile() {
                     {Math.abs(rp)} RP
                   </Text>
                 </View>
-              </View>
+              </Enter>
             );
           })}
         </View>
       </ScrollView>
+      </TabScene>
 
       <Sheet visible={editing} onClose={() => setEditing(false)} label="Edit avatar">
         <View style={styles.sheetHead}>
           <Text style={styles.sheetTitle}>Edit avatar</Text>
-          <Pressable style={styles.done} onPress={() => setEditing(false)} accessibilityRole="button" testID="avatar-done">
+          <PressableScale style={styles.done} onPress={() => setEditing(false)} accessibilityRole="button" testID="avatar-done">
             <Text style={styles.doneText}>Done</Text>
-          </Pressable>
+          </PressableScale>
         </View>
         <View style={{ alignSelf: "center" }}>
           <Avatar color={avatar.color} frame={avatar.frame} aura={avatar.aura} size={104} />
         </View>
         <View style={styles.tabs} accessibilityRole="tablist">
           {EDITOR_TABS.map((key) => (
-            <Pressable
+            <PressableScale
               key={key}
               onPress={() => setTab(key)}
               accessibilityRole="tab"
@@ -278,13 +294,13 @@ export default function Profile() {
               testID={`avatar-tab-${key.toLowerCase()}`}
             >
               <Text style={[styles.tabText, tab === key && { color: colors.text }]}>{key}</Text>
-            </Pressable>
+            </PressableScale>
           ))}
         </View>
         <View style={styles.options}>
           {options.map((option, index) => (
             <View key={option.label} style={{ alignItems: "center", gap: 6 }}>
-              <Pressable
+              <PressableScale
                 onPress={option.pick}
                 accessibilityRole="button"
                 accessibilityLabel={option.label}
@@ -293,7 +309,7 @@ export default function Profile() {
                 testID={`avatar-option-${index}`}
               >
                 <Swatch tab={tab} index={index} c1={tab === "Color" ? AVATAR_PALETTES[index].c1 : palette.c1} c2={tab === "Color" ? AVATAR_PALETTES[index].c2 : palette.c2} />
-              </Pressable>
+              </PressableScale>
               <Text style={styles.optionLabel}>{option.label}</Text>
             </View>
           ))}

@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { Enter, Skeleton } from "@/motion";
 import { RankBadge } from "@/platform/RankBadge";
 import { colors, fonts, formatPoints } from "@/platform/theme";
 import { Avatar } from "@/platform/Avatar";
@@ -19,8 +20,14 @@ export default function Leaderboard() {
         This week{board?.me ? ` · you're #${board.me.position}` : ""}
       </Body>
       <View>
-        {board?.entries.map((entry) => (
-          <View key={entry.position} style={[styles.row, entry.isMe && styles.mine]}>
+        {!board &&
+          Array.from({ length: 8 }, (_, index) => (
+            <View key={index} style={styles.row}>
+              <Skeleton height={36} radius={12} />
+            </View>
+          ))}
+        {board?.entries.map((entry, index) => (
+          <Enter key={entry.position} index={index} style={[styles.row, entry.isMe && styles.mine]}>
             <Text style={styles.position}>{entry.position}</Text>
             <Avatar color={entry.avatar.color} size={36} />
             <Text style={styles.name} numberOfLines={1}>
@@ -28,7 +35,7 @@ export default function Leaderboard() {
             </Text>
             <RankBadge tier={entry.tier} division={entry.division} size={28} glow={false} />
             <Text style={styles.points}>{formatPoints(entry.points)}</Text>
-          </View>
+          </Enter>
         ))}
       </View>
     </Screen>

@@ -1,11 +1,12 @@
 import { useQuery } from "convex/react";
 import { router } from "expo-router";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { Enter, PressableScale, TabScene } from "@/motion";
 import { Avatar } from "@/platform/Avatar";
 import { FEATURED_IMAGE, GAMES, type Game } from "@/platform/games";
 import { AkoMark, PeopleIcon, PointsGem } from "@/platform/icons";
@@ -18,9 +19,9 @@ import { RUN_LENGTH } from "../../../convex/unpredictable/seed";
 
 function IconButton({ children, onPress, label }: { children: ReactNode; onPress: () => void; label: string }) {
   return (
-    <Pressable style={styles.iconButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+    <PressableScale style={styles.iconButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
       {children}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -38,7 +39,8 @@ type Arena = { bossName: string | null; defeated: boolean; round: number; knight
 function FeaturedCard({ arena }: { arena: Arena }) {
   const knights = arena?.knights ?? 0;
   return (
-    <Pressable
+    <PressableScale
+      scale={0.98}
       style={styles.featured}
       onPress={() => router.push("/jailbreak")}
       testID="home-featured"
@@ -66,7 +68,7 @@ function FeaturedCard({ arena }: { arena: Arena }) {
           <Text style={styles.playText}>Play</Text>
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -80,15 +82,18 @@ function useUnpredictableProgress(deviceId: string | null) {
 
 const BAR_COLOR = { escaped: colors.up, predicted: colors.down, void: "#4A4766" } as const;
 
-function GameTile({ game, meta, progress, onPress }: {
+function GameTile({ game, index, meta, progress, onPress }: {
   game: Game;
+  index: number;
   meta: string;
   progress?: (keyof typeof BAR_COLOR | null)[];
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      style={styles.tile}
+    <Enter index={index} style={styles.tile}>
+    <PressableScale
+      scale={0.94}
+      style={styles.tileInner}
       onPress={onPress}
       testID={`home-tile-${game.key}`}
       accessibilityRole="button"
@@ -123,7 +128,8 @@ function GameTile({ game, meta, progress, onPress }: {
           {meta}
         </Text>
       </View>
-    </Pressable>
+    </PressableScale>
+    </Enter>
   );
 }
 
@@ -155,6 +161,7 @@ export default function Home() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="home">
+      <TabScene>
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
         <View style={styles.header}>
           <View style={styles.brand}>
@@ -168,7 +175,7 @@ export default function Home() {
                 <Path d="M20 20l-4-4" />
               </Svg>
             </IconButton>
-            <Pressable
+            <PressableScale
               style={styles.pointsChip}
               onPress={() => router.navigate("/wallet")}
               testID="home-points"
@@ -177,7 +184,7 @@ export default function Home() {
             >
               <PointsGem />
               <Text style={styles.pointsText}>{me ? formatPoints(me.points) : "–"}</Text>
-            </Pressable>
+            </PressableScale>
             <IconButton label="Notifications" onPress={() => setToast("Notifications are coming soon")}>
               <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9" />
@@ -188,7 +195,7 @@ export default function Home() {
         </View>
 
         {me && (
-          <Pressable style={styles.me} onPress={() => router.navigate("/profile")} testID="home-me">
+          <PressableScale scale={0.98} style={styles.me} onPress={() => router.navigate("/profile")} testID="home-me">
             <Avatar color={me.avatar.color} />
             <Text style={styles.name} numberOfLines={1}>
               {me.name}
@@ -202,7 +209,7 @@ export default function Home() {
                 <Text style={styles.streakText}>{me.streakDays}-day streak</Text>
               </View>
             )}
-          </Pressable>
+          </PressableScale>
         )}
 
         <View style={styles.section}>
@@ -213,9 +220,10 @@ export default function Home() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>More games</Text>
           <View style={styles.grid}>
-            {GAMES.filter((game) => game.key !== "jailbreak").map((game) => (
+            {GAMES.filter((game) => game.key !== "jailbreak").map((game, index) => (
               <GameTile
                 key={game.key}
+                index={index}
                 game={game}
                 meta={metaFor(game)}
                 progress={game.live === "unpredictable" && unpredictable.done > 0 ? unpredictable.outcomes : undefined}
@@ -225,6 +233,7 @@ export default function Home() {
           </View>
         </View>
       </ScrollView>
+      </TabScene>
       <Toast message={toast} onDone={clearToast} />
     </SafeAreaView>
   );
@@ -271,7 +280,8 @@ const styles = StyleSheet.create({
   playButton: { paddingVertical: 12, paddingHorizontal: 22, borderRadius: radii.pill, backgroundColor: "#9FD9E6" },
   playText: { fontFamily: fonts.bold, fontSize: 15, color: "#0A0D16" },
   grid: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 16 },
-  tile: { width: "30.5%", flexGrow: 1, maxWidth: "32%", gap: 5 },
+  tile: { width: "30.5%", flexGrow: 1, maxWidth: "32%" },
+  tileInner: { gap: 5 },
   thumb: { aspectRatio: 1, borderRadius: 16, overflow: "hidden", backgroundColor: colors.raised },
   newBadge: { position: "absolute", top: 6, left: 6, paddingVertical: 2, paddingHorizontal: 6, borderRadius: radii.pill, backgroundColor: colors.text },
   newText: { fontFamily: fonts.bold, fontSize: 9.5, color: colors.ctaText, letterSpacing: 0.3 },

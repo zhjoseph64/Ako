@@ -40,7 +40,7 @@ type Props = {
   matchedGuess: number | null;
   reason: string;
   usedMemory: boolean;
-  last: boolean;
+  nextLabel: string;
   onNext: () => void;
   onVerdict: (outcome: Outcome) => void;
 };
@@ -48,7 +48,7 @@ type Props = {
 const VERDICT: Record<Outcome, { title: string; sub: string; mood: Mood }> = {
   predicted: {
     title: "PREDICTED",
-    sub: "the AI saw you coming.",
+    sub: "the squid saw you coming. -1 life",
     mood: "smug",
   },
   escaped: {
@@ -86,20 +86,18 @@ function GuessCard(props: { index: number; guess: string; hit: boolean }) {
     <View style={styles.slot}>
       <Animated.View style={[StyleSheet.absoluteFill, front]}>
         <PixelBox fill={palette.panelHi} style={styles.card}>
-          <Body color={palette.dim} size={24}>
-            {"▓▓ SEALED GUESS " + (props.index + 1) + " ▓▓"}
-          </Body>
+          <Body color={palette.dim}>{"SEALED GUESS " + (props.index + 1)}</Body>
+          <Body color={palette.gold}>?</Body>
         </PixelBox>
       </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, back]}>
         <PixelBox
           color={props.hit ? palette.pink : palette.border}
-          fill={props.hit ? "#2a1024" : palette.panel}
-          shadow={props.hit ? palette.pinkDark : palette.shadow}
+          fill={props.hit ? "#3a1230" : palette.panel}
           style={styles.card}
         >
           <Body
-            size={28}
+            size={11}
             color={props.hit ? palette.pink : palette.text}
             style={styles.guess}
             numberOfLines={1}
@@ -187,14 +185,14 @@ export function Reveal(props: Props) {
     <View style={styles.wrap}>
       {shown && outcome === "escaped" && <Confetti />}
       <View style={styles.top}>
-        <Body color={palette.dim} size={22}>
+        <Body color={palette.dim} size={9} numberOfLines={3}>
           {props.prompt}
         </Body>
         <Body
-          size={36}
+          size={13}
           color={palette.text}
           testID="your-answer"
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {props.answer ? "> " + props.answer : "> ..."}
         </Body>
@@ -213,14 +211,14 @@ export function Reveal(props: Props) {
 
       <Animated.View style={[styles.verdict, slamStyle]}>
         <Display
-          size={outcome === "escaped" ? 17 : 22}
+          size={outcome === "escaped" ? 18 : 22}
           color={color}
           testID="round-result"
-          style={[styles.glow, { textShadowColor: color }]}
+          style={styles.title}
         >
           {verdict.title}
         </Display>
-        <Body color={palette.dim} size={22} style={styles.center}>
+        <Body color={palette.text} size={9} style={styles.center}>
           {outcome === "void" && props.judgeReason
             ? props.judgeReason.toLowerCase()
             : verdict.sub}
@@ -232,15 +230,20 @@ export function Reveal(props: Props) {
         )}
       </Animated.View>
 
-      <Animated.View style={[styles.after, afterStyle]}>
+      <Animated.View
+        style={[styles.after, afterStyle]}
+        pointerEvents={shown ? "auto" : "none"}
+      >
         <View style={styles.speech}>
-          <Opponent mood={shown ? verdict.mood : "thinking"} scale={5} />
+          <Opponent mood={shown ? verdict.mood : "thinking"} scale={4} />
           <View style={styles.bubble}>
             <PixelBox pad={unit * 2}>
               <Display size={7} color={palette.gold}>
-                {props.usedMemory ? "AI · FROM MEMORY" : "AI"}
+                {props.usedMemory ? "SQUID · FROM MEMORY" : "SQUID"}
               </Display>
-              <Body size={21}>{props.reason}</Body>
+              <Body size={8} numberOfLines={5}>
+                {props.reason}
+              </Body>
             </PixelBox>
           </View>
         </View>
@@ -248,7 +251,7 @@ export function Reveal(props: Props) {
           <View style={styles.crowdRow}>
             <Body
               color={palette.cyan}
-              size={22}
+              size={8}
               style={styles.center}
               testID="crowd-stat"
             >
@@ -258,7 +261,7 @@ export function Reveal(props: Props) {
             </Body>
             {hasBonus && (
               <Animated.View style={[styles.bonus, bonusStyle]}>
-                <Display size={8} color={palette.bg}>
+                <Display size={8} color={palette.ink}>
                   +50 CROWD BONUS
                 </Display>
               </Animated.View>
@@ -267,7 +270,7 @@ export function Reveal(props: Props) {
         )}
         <PixelButton
           testID="next-button"
-          label={props.last ? "SEE MY SCORE ▶" : "NEXT PROMPT ▶"}
+          label={props.nextLabel}
           onPress={props.onNext}
         />
       </Animated.View>
@@ -278,20 +281,22 @@ export function Reveal(props: Props) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: "space-between" },
   top: { gap: unit },
-  cards: { gap: unit * 3 },
-  slot: { height: 60 },
+  cards: { gap: unit * 2 },
+  slot: { height: 54 },
   card: {
-    height: 56,
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingVertical: 0,
   },
   guess: { flexShrink: 1 },
   verdict: { alignItems: "center", gap: unit * 2 },
-  glow: {
+  title: {
     textAlign: "center",
-    textShadowRadius: 10,
-    textShadowOffset: { width: 0, height: 0 },
+    textShadowColor: palette.ink,
+    textShadowRadius: 0,
+    textShadowOffset: { width: 3, height: 3 },
   },
   center: { textAlign: "center" },
   after: { gap: unit * 3 },
@@ -300,6 +305,8 @@ const styles = StyleSheet.create({
   crowdRow: { alignItems: "center", gap: unit * 2 },
   bonus: {
     backgroundColor: palette.green,
+    borderWidth: 3,
+    borderColor: palette.ink,
     paddingHorizontal: unit * 2,
     paddingVertical: unit * 1.5,
   },

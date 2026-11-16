@@ -136,12 +136,14 @@ export const activity = query({
     const month = await ctx.db
       .query("platLedger")
       .withIndex("by_deviceId_and_createdAt", (q) => q.eq("deviceId", args.deviceId).gte("createdAt", args.monthStart))
+      .order("desc")
       .take(2000);
+    month.reverse();
     let monthPoints = 0;
     let dayPoints = 0;
     const monthSeries = [0];
     for (const row of month) {
-      if (row.points <= 0 || row.game === "cashout") continue;
+      if (row.points <= 0 || row.game === "cashout" || row.game === "purchase") continue;
       monthPoints += row.points;
       if (row.createdAt >= args.dayStart) dayPoints += row.points;
       monthSeries.push(monthPoints);

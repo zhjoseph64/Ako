@@ -94,7 +94,8 @@ export const demoHistory = internalMutation({
     const existing = await ctx.db
       .query("platLedger")
       .withIndex("by_deviceId_and_createdAt", (q) => q.eq("deviceId", args.deviceId))
-      .take(2000);
+      .take(2001);
+    if (existing.length > 2000) throw new Error("This device has too much history to back-fill");
     if (existing.some((row) => row.note.startsWith(DEMO_NOTE))) return "This device already has demo history";
 
     let seed = 0;

@@ -4,6 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, mutation, query, type MutationCtx } from "../_generated/server";
 import schema from "../schema";
 import { bossModelName } from "./bossAdapters";
+import { BOT_NAMES, botPlayerId, scheduleBots } from "./bots";
 import { compileWinRegex } from "./evaluator";
 import { canonicalRoomCode } from "./roomCode";
 import { winCheckType } from "./tables";
@@ -38,6 +39,7 @@ const publicPlayer = v.object({
   chatEpoch: v.number(),
   lastSeen: v.number(),
   credits: v.optional(v.number()),
+  isBot: v.optional(v.boolean()),
 });
 
 function requireCode(code: string) {
@@ -133,6 +135,7 @@ export const joinRoom = mutation({
         throw new Error("This knight belongs to another device");
       }
       await markActive(ctx, existing, { name: name || existing.name, secret: args.secret });
+      await scheduleBots(ctx, room);
       return { roomId: room._id, code };
     }
     await ctx.db.insert("jbPlayers", {
@@ -145,6 +148,7 @@ export const joinRoom = mutation({
       chatEpoch: 0,
       lastSeen: Date.now(),
     });
+    await scheduleBots(ctx, room);
     return { roomId: room._id, code };
   },
 });
@@ -212,6 +216,42 @@ export const heartbeat = mutation({
   returns: v.null(),
   handler: async (ctx, { roomId, ...who }) => {
     await markActive(ctx, await requirePlayer(ctx, roomId, who));
+    const room = await ctx.db.get("jbRooms", roomId);
+    if (room) await scheduleBots(ctx, room);
+    return null;
+  },
+});
+
+export const setDemoBots = mutation({
+  args: { roomId: v.id("jbRooms"), ...credentials, enabled: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, { roomId, enabled, ...who }) => {
+    const room = await requireHost(ctx, roomId, who);
+    const players = await ctx.db
+      .query("jbPlayers")
+      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+      .take(100);
+    if (!enabled) {
+      for (const bot of players.filter((p) => p.isBot)) await ctx.db.delete("jbPlayers", bot._id);
+      await ctx.db.patch("jbRooms", roomId, { demoBots: false });
+      return null;
+    }
+    for (const [index, botName] of BOT_NAMES.entries()) {
+      const playerId = botPlayerId(roomId, index);
+      if (players.some((p) => p.playerId === playerId)) continue;
+      await ctx.db.insert("jbPlayers", {
+        roomId,
+        playerId,
+        name: botName,
+        ring: START_RING,
+        slot: await claimSlot(ctx, roomId, null),
+        chatEpoch: 0,
+        lastSeen: Date.now(),
+        isBot: true,
+      });
+    }
+    await ctx.db.patch("jbRooms", roomId, { demoBots: true });
+    await scheduleBots(ctx, { ...room, demoBots: true });
     return null;
   },
 });

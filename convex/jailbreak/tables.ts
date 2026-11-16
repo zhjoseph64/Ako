@@ -19,6 +19,8 @@ export const jailbreakTables = {
     winnerId: v.optional(v.string()),
     winnerName: v.optional(v.string()),
     winningAttackId: v.optional(v.id("jbAttacks")),
+    demoBots: v.optional(v.boolean()),
+    botsTickAt: v.optional(v.number()),
   }).index("by_code", ["code"]),
 
   jbPlayers: defineTable({
@@ -31,6 +33,7 @@ export const jailbreakTables = {
     chatEpoch: v.number(),
     lastSeen: v.number(),
     credits: v.optional(v.number()),
+    isBot: v.optional(v.boolean()),
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"])

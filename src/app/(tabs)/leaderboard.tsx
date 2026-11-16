@@ -1,10 +1,10 @@
 import { useQuery } from "convex/react";
 import { router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 
+import { Enter, PressableScale, Skeleton, TabScene } from "@/motion";
 import { Avatar } from "@/platform/Avatar";
 import { PRIZE_ZONE, WEEKLY_POOL_CENTS, WEEKLY_PRIZES, weekEndsIn } from "@/platform/prizes";
 import { RankBadge } from "@/platform/RankBadge";
@@ -53,15 +53,16 @@ export default function Leaderboard() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="leaderboard">
+      <TabScene>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Leaderboard</Text>
-          <Pressable style={styles.howButton} onPress={() => router.push("/ranks")} accessibilityRole="link" accessibilityLabel="How ranks work" testID="leaderboard-ranks">
+          <PressableScale style={styles.howButton} onPress={() => router.push("/ranks")} accessibilityRole="link" accessibilityLabel="How ranks work" testID="leaderboard-ranks">
             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.secondary} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
               <Circle cx="12" cy="12" r="9" />
               <Path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01" />
             </Svg>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={styles.pool} testID="leaderboard-pool">
@@ -93,6 +94,27 @@ export default function Leaderboard() {
           </View>
         </View>
 
+        {!board && (
+          <View style={styles.podium}>
+            {[96, 120, 84].map((height, index) => (
+              <View key={index} style={styles.podiumColumn}>
+                <Skeleton width={56} height={56} radius={28} />
+                <Skeleton width="70%" height={12} radius={6} style={{ marginTop: 8 }} />
+                <Skeleton height={height} radius={16} style={{ marginTop: 10 }} />
+              </View>
+            ))}
+          </View>
+        )}
+        {!board && (
+          <View style={styles.list}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <View key={index} style={styles.row}>
+                <Skeleton height={38} radius={12} />
+              </View>
+            ))}
+          </View>
+        )}
+
         {board && entries.length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>The week just started</Text>
@@ -106,9 +128,9 @@ export default function Leaderboard() {
               const look = PODIUM[entry.position as 1 | 2 | 3];
               const first = entry.position === 1;
               return (
-                <Animated.View
+                <Enter
                   key={entry.position}
-                  entering={FadeInUp.delay(index * 90).duration(420)}
+                  index={index}
                   style={styles.podiumColumn}
                   testID={`leaderboard-podium-${entry.position}`}
                 >
@@ -132,7 +154,7 @@ export default function Leaderboard() {
                   <View style={[styles.step, first ? styles.stepFirst : styles.stepOther, { height: look.step }]}>
                     <Text style={[styles.stepNumber, first && { color: colors.text }]}>{entry.position}</Text>
                   </View>
-                </Animated.View>
+                </Enter>
               );
             })}
           </View>
@@ -140,9 +162,9 @@ export default function Leaderboard() {
 
         <View style={styles.list}>
           {rest.map((entry, index) => (
-            <Animated.View
+            <Enter
               key={entry.position}
-              entering={FadeInDown.delay(200 + Math.min(index, 8) * 40).duration(360)}
+              index={index + 3}
               style={[styles.row, entry.isMe && styles.rowMine]}
               testID={`leaderboard-row-${entry.position}`}
             >
@@ -158,14 +180,15 @@ export default function Leaderboard() {
                 <Text style={styles.tier}>{tierLabel(entry.tier, entry.division)}</Text>
               </View>
               <Text style={styles.points}>{formatPoints(entry.points)}</Text>
-            </Animated.View>
+            </Enter>
           ))}
         </View>
       </ScrollView>
+      </TabScene>
 
       {mine && (
         <View style={styles.youWrap} pointerEvents="box-none">
-          <Pressable style={styles.you} onPress={() => router.push("/profile")} accessibilityRole="link" testID="leaderboard-you">
+          <PressableScale style={styles.you} scale={0.98} onPress={() => router.push("/profile")} accessibilityRole="link" testID="leaderboard-you">
             <Text style={styles.youPlace}>#{formatPoints(mine.position)}</Text>
             <Avatar color={me?.avatar.color ?? colors.rating} size={38} />
             <View style={styles.rowText}>
@@ -177,7 +200,7 @@ export default function Leaderboard() {
               </Text>
             </View>
             <Text style={styles.points}>{formatPoints(mine.points)}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       )}
     </SafeAreaView>

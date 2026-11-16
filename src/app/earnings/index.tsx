@@ -4,8 +4,10 @@ import * as Linking from "expo-linking";
 import { Stack } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { Enter, PressableScale, RollingNumber } from "@/motion";
+import { Sheet } from "@/platform/Sheet";
 import { api } from "../../../convex/_generated/api";
 import { useWalletCredentials } from "@/cashout/credentials";
 import { colors, errorMessage, formatCredits, formatUsd, rateLabel } from "@/cashout/format";
@@ -151,13 +153,11 @@ export default function EarningsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.label}>Cash value available</Text>
-          <Text style={styles.big} testID="available-cash">
-            {formatUsd(data.availableCents)}
-          </Text>
+          <RollingNumber value={data.availableCents} format={formatUsd} lineHeight={52} style={styles.big} testID="available-cash" />
           <Text style={styles.secondary}>
             {formatCredits(data.availableCredits)} · {rateLabel(rules.centsPerCredit)}
           </Text>
-          <Pressable
+          <PressableScale
             testID="cash-out"
             accessibilityRole="button"
             disabled={blocker !== null}
@@ -165,7 +165,7 @@ export default function EarningsScreen() {
             style={[styles.cta, blocker !== null && styles.ctaDisabled]}
           >
             <Text style={styles.ctaText}>Cash out {formatUsd(data.cashOutNetCents)}</Text>
-          </Pressable>
+          </PressableScale>
           {blocker && <Text style={styles.hint}>{blocker}</Text>}
         </View>
 
@@ -199,7 +199,7 @@ export default function EarningsScreen() {
                   style={styles.input}
                 />
               )}
-              <Pressable
+              <PressableScale
                 testID="connect-whop"
                 accessibilityRole="button"
                 disabled={data.linkMode === null || linking || (data.linkMode === "username" && !username.trim())}
@@ -211,7 +211,7 @@ export default function EarningsScreen() {
                 ]}
               >
                 <Text style={styles.secondaryButtonText}>{linking ? "Connecting…" : "Connect Whop"}</Text>
-              </Pressable>
+              </PressableScale>
               {data.linkMode === "username" && (
                 <Text style={styles.hint}>Double-check the username: cash-outs are paid to that Whop account.</Text>
               )}
@@ -222,11 +222,11 @@ export default function EarningsScreen() {
 
         <Text style={styles.sectionTitle}>History</Text>
         {data.history.length === 0 && <Text style={styles.muted}>No cash-outs yet.</Text>}
-        {data.history.map((r) => {
+        {data.history.map((r, index) => {
           const copy = statusCopy(r);
           const demo = r.whopTransferId?.startsWith("demo_") ?? false;
           return (
-            <View key={r._id} style={styles.row} testID="cash-out-row">
+            <Enter key={r._id} index={index} style={styles.row} testID="cash-out-row">
               <View style={styles.rowHead}>
                 <Text style={styles.rowAmount}>{formatUsd(r.netCents)}</Text>
                 <Text style={[styles.status, { color: copy.color }]}>{demo ? `${copy.label} (demo)` : copy.label}</Text>
@@ -257,7 +257,7 @@ export default function EarningsScreen() {
                   </Text>
                 </View>
               )}
-            </View>
+            </Enter>
           );
         })}
 
@@ -286,8 +286,8 @@ export default function EarningsScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={requestId !== null} transparent animationType="slide" onRequestClose={() => setRequestId(null)}>
-        <View style={styles.sheetBackdrop}>
+      <Sheet visible={requestId !== null} onClose={() => setRequestId(null)} label="Confirm cash-out">
+        <View>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>Confirm cash-out</Text>
             <Line label="Credits" value={formatCredits(data.availableCredits)} />
@@ -306,7 +306,7 @@ export default function EarningsScreen() {
             </Text>
             {data.mode === "demo" && <Text style={[styles.hint, { color: colors.warning }]}>{DEMO_LABEL}</Text>}
             {confirmError && <Text style={[styles.hint, { color: colors.down }]}>{confirmError}</Text>}
-            <Pressable
+            <PressableScale
               testID="confirm-cash-out"
               accessibilityRole="button"
               disabled={submitting}
@@ -318,13 +318,13 @@ export default function EarningsScreen() {
               ) : (
                 <Text style={styles.ctaText}>Confirm {formatUsd(data.cashOutNetCents)}</Text>
               )}
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => setRequestId(null)} style={styles.cancel}>
+            </PressableScale>
+            <PressableScale accessibilityRole="button" onPress={() => setRequestId(null)} style={styles.cancel}>
               <Text style={styles.secondaryButtonText}>Cancel</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </View>
-      </Modal>
+      </Sheet>
     </View>
   );
 }
@@ -392,8 +392,7 @@ const styles = StyleSheet.create({
   link: { color: colors.violet, fontSize: 14, fontWeight: "600", paddingVertical: 6 },
   rewardRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   rewardCredits: { color: colors.up, fontSize: 14, fontWeight: "700" },
-  sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
-  sheet: { backgroundColor: colors.raised, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, gap: 10 },
+  sheet: { gap: 10 },
   sheetTitle: { color: colors.text, fontSize: 20, fontWeight: "700", marginBottom: 4 },
   line: { flexDirection: "row", justifyContent: "space-between" },
   lineValue: { color: colors.secondary, fontSize: 14 },

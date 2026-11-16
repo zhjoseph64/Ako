@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { Enter, fadeIn, PressableScale, webScreenIn } from "@/motion";
 
 import { RankBadge } from "@/platform/RankBadge";
 import { colors, fonts, formatPoints } from "@/platform/theme";
@@ -17,6 +20,7 @@ export default function Ranks() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="ranks">
+      <Animated.View entering={webScreenIn} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
         <TopBar fallback="/profile" />
         <View style={styles.intro}>
@@ -27,13 +31,14 @@ export default function Ranks() {
         </View>
 
         <View style={styles.list}>
-          {LADDER.map((tier) => {
+          {LADDER.map((tier, index) => {
             const isYou = me?.tier === tier.key;
             const expanded = open === tier.key;
             const top = tier.key === "singular";
             return (
-              <View key={tier.key} style={[styles.card, isYou && styles.cardYou]} testID={`ranks-tier-${tier.key}`}>
-                <Pressable
+              <Enter key={tier.key} index={index} style={[styles.card, isYou && styles.cardYou]} testID={`ranks-tier-${tier.key}`}>
+                <PressableScale
+                  scale={0.98}
                   style={styles.row}
                   onPress={() => setPicked(expanded ? null : tier.key)}
                   accessibilityRole="button"
@@ -59,9 +64,9 @@ export default function Ranks() {
                       {Number.isInteger(tier.multiplier) ? tier.multiplier.toFixed(1) : tier.multiplier}x
                     </Text>
                   </View>
-                </Pressable>
+                </PressableScale>
                 {expanded && (
-                  <View style={styles.divisions}>
+                  <Animated.View entering={fadeIn} style={styles.divisions}>
                     {[1, 2, 3].map((n) => {
                       const mine = isYou && me?.division === n;
                       return (
@@ -76,9 +81,9 @@ export default function Ranks() {
                         </View>
                       );
                     })}
-                  </View>
+                  </Animated.View>
                 )}
-              </View>
+              </Enter>
             );
           })}
         </View>
@@ -99,6 +104,7 @@ export default function Ranks() {
           </View>
         </View>
       </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }

@@ -1,15 +1,18 @@
 import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import { ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
+import { PressableScale, TabScene } from "@/motion";
 import { colors, fonts, radii, space } from "./theme";
 
 export function Screen({ children, testID }: { children: ReactNode; testID?: string }) {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID={testID}>
-      <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      <TabScene>
+        <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      </TabScene>
     </SafeAreaView>
   );
 }
@@ -17,7 +20,7 @@ export function Screen({ children, testID }: { children: ReactNode; testID?: str
 export function TopBar({ title, right, fallback = "/" }: { title?: string; right?: ReactNode; fallback?: "/" | "/profile" }) {
   return (
     <View style={styles.topBar}>
-      <Pressable
+      <PressableScale
         onPress={() => (fallback === "/" ? router.navigate("/") : router.canGoBack() ? router.back() : router.replace(fallback))}
         accessibilityRole="button"
         accessibilityLabel={fallback === "/" ? "Back to home" : "Back"}
@@ -27,7 +30,7 @@ export function TopBar({ title, right, fallback = "/" }: { title?: string; right
         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <Path d="M15 5l-7 7 7 7" />
         </Svg>
-      </Pressable>
+      </PressableScale>
       {title && <Text style={styles.topBarTitle}>{title}</Text>}
       {title && (right ?? <View style={{ width: 44 }} />)}
     </View>

@@ -1,13 +1,14 @@
 import { useAction, useMutation, useQuery } from "convex/react";
-import { router } from "expo-router";
+import { router, useFocusEffect, useIsFocused } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { ZoomIn } from "react-native-reanimated";
+import { useCallback, useState } from "react";
+import { Image, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 
 import { Sheet } from "@/platform/Sheet";
+import { CoinFlight, duration, Enter, haptic, PressableScale, RollingNumber, Skeleton, spring, TabScene } from "@/motion";
 import { GAMES } from "@/platform/games";
 import { PointsGem } from "@/platform/icons";
 import { colors, ctaGradient, fonts, formatCents, formatPoints } from "@/platform/theme";
@@ -59,6 +60,18 @@ export default function Wallet() {
   const [sent, setSent] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const focused = useIsFocused();
+  const [visits, setVisits] = useState(0);
+  useFocusEffect(useCallback(() => () => setVisits((count) => count + 1), []));
+  const [coins, setCoins] = useState({ burst: 0, drain: false });
+  const pop = useSharedValue(1);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
+  const onRoll = (from: number, to: number, changed: boolean) => {
+    if (!changed) return;
+    setCoins((last) => ({ burst: last.burst + 1, drain: to < from }));
+    if (to > from) pop.set(withDelay(520, withSequence(withTiming(1.06, { duration: duration.fast }), withSpring(1, spring.pop))));
+  };
 
   const startCheckout = useAction(api.whop.checkout.start);
   const lastPurchase = useQuery(api.whop.credit.lastPurchase, deviceId && secret ? { deviceId, secret } : "skip");
@@ -112,6 +125,7 @@ export default function Wallet() {
     try {
       await cashOut({ deviceId, secret, points: amount });
       setSent(amount);
+      haptic("success");
     } catch {
       setError("Couldn't cash out. Try again.");
     } finally {
@@ -137,14 +151,29 @@ export default function Wallet() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="wallet">
+      <TabScene>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <TopBar title="Wallet" />
 
         <View style={styles.hero}>
           <Text style={styles.balanceLabel}>Cash available</Text>
-          <Text style={styles.balance} testID="wallet-balance">
-            {me ? formatCents(me.balanceCents) : "–"}
-          </Text>
+          {me === undefined ? (
+            <Skeleton width={190} height={46} radius={14} style={{ marginVertical: 4 }} />
+          ) : (
+            <Animated.View style={[styles.balancePop, popStyle]}>
+              <RollingNumber
+                value={me?.balanceCents}
+                format={formatCents}
+                active={focused && !sheet}
+                epoch={visits}
+                lineHeight={54}
+                style={styles.balance}
+                testID="wallet-balance"
+                onRoll={onRoll}
+              />
+            </Animated.View>
+          )}
+          <CoinFlight burst={coins.burst} drain={coins.drain} style={{ left: 64, top: 62 }} />
           <View style={styles.pointsRow}>
             <View style={styles.pointsPill}>
               <PointsGem size={14} />
@@ -156,14 +185,14 @@ export default function Wallet() {
           </View>
 
           <View style={styles.actions}>
-            <Pressable style={[styles.action, styles.actionPrimary]} onPress={openSheet} disabled={!me} accessibilityRole="button" testID="wallet-cash-out">
+            <PressableScale style={[styles.action, styles.actionPrimary]} onPress={openSheet} disabled={!me} accessibilityRole="button" testID="wallet-cash-out">
               <Icon d="M12 19V5M5.5 11.5 12 5l6.5 6.5" color={colors.ctaText} size={18} />
               <Text style={[styles.actionText, { color: colors.ctaText }]}>Cash out</Text>
-            </Pressable>
-            <Pressable style={[styles.action, styles.actionSecondary]} onPress={() => router.push("/ranks")} accessibilityRole="link" testID="wallet-boost">
+            </PressableScale>
+            <PressableScale style={[styles.action, styles.actionSecondary]} onPress={() => router.push("/ranks")} accessibilityRole="link" testID="wallet-boost">
               <Icon d="M3 17l6-6 4 4 8-8M15 7h6v6" color={colors.text} size={18} />
               <Text style={styles.actionText}>Boost</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </View>
 
@@ -194,7 +223,8 @@ export default function Wallet() {
         </View>
 
         <View style={[styles.card, styles.list]}>
-          <Pressable
+          <PressableScale
+            scale={0.98}
             style={[styles.listRow, checkout === "opening" && { opacity: 0.6 }]}
             onPress={getTokens}
             disabled={!deviceId || !secret || checkout === "opening"}
@@ -217,9 +247,9 @@ export default function Wallet() {
             <View style={styles.price}>
               <Text style={styles.priceText}>{checkout === "opening" ? "Opening…" : `$${TOKEN_PACK.priceUsd.toFixed(2)}`}</Text>
             </View>
-          </Pressable>
+          </PressableScale>
           <View style={styles.listDivider} />
-          <Pressable style={styles.listRow} onPress={() => router.push("/earnings")} accessibilityRole="link" testID="wallet-open-earnings">
+          <PressableScale style={styles.listRow} scale={0.98} onPress={() => router.push("/earnings")} accessibilityRole="link" testID="wallet-open-earnings">
             <IconTile d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" tint="#FFD2B0" bg="#3A2B2A" />
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.rowTitle}>Cash out with Whop</Text>
@@ -228,7 +258,7 @@ export default function Wallet() {
               </Text>
             </View>
             <Icon d="M9 6l6 6-6 6" color={colors.muted} size={18} />
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={styles.activity}>
@@ -239,7 +269,13 @@ export default function Wallet() {
               <Text style={styles.emptyText}>Points you earn show up here.</Text>
             </View>
           )}
-          {activity?.entries.slice(0, 8).map((entry) => {
+          {!activity &&
+            Array.from({ length: 4 }, (_, index) => (
+              <View key={index} style={styles.entry}>
+                <Skeleton height={42} radius={13} />
+              </View>
+            ))}
+          {activity?.entries.slice(0, 8).map((entry, index) => {
             const game = entry.game === "unpredictable" || entry.game === "jailbreak";
             const art = GAMES.find((g) => g.key === entry.game)?.image;
             const detail = game
@@ -251,7 +287,7 @@ export default function Wallet() {
                   : entry.note;
             const icon = ENTRY_ICONS[entry.game] ?? ENTRY_ICONS.default;
             return (
-              <View key={entry.at} style={styles.entry} testID="wallet-activity">
+              <Enter key={entry.at} index={index} style={styles.entry} testID="wallet-activity">
                 {art ? <Image source={art} style={styles.entryArt} /> : <IconTile d={icon.d} tint={icon.tint} bg={icon.bg} />}
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.rowTitle} numberOfLines={1}>
@@ -274,11 +310,12 @@ export default function Wallet() {
                     <Text style={styles.entryPoints}>{formatPoints(Math.abs(entry.points))} pts</Text>
                   )}
                 </View>
-              </View>
+              </Enter>
             );
           })}
         </View>
       </ScrollView>
+      </TabScene>
 
       <Sheet visible={sheet} onClose={() => setSheet(false)} label="Cash out">
         {sent === null ? (
@@ -293,7 +330,7 @@ export default function Wallet() {
                 const on = index === choice;
                 const disabled = option.points > balance;
                 return (
-                  <Pressable
+                  <PressableScale
                     key={option.label}
                     onPress={() => setChoice(index)}
                     disabled={disabled}
@@ -303,7 +340,7 @@ export default function Wallet() {
                     testID={`cashout-amount-${index}`}
                   >
                     <Text style={[styles.amountChipText, on && { color: colors.ctaText }]}>{option.label}</Text>
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -312,11 +349,12 @@ export default function Wallet() {
               {METHODS.map((option, index) => {
                 const on = index === method;
                 return (
-                  <Pressable
+                  <PressableScale
                     key={option.name}
                     onPress={() => setMethod(index)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: on }}
+                    scale={0.98}
                     style={[styles.method, on && styles.methodOn]}
                     testID={`cashout-method-${index}`}
                   >
@@ -325,7 +363,7 @@ export default function Wallet() {
                       <Text style={styles.methodDetail}>{option.detail}</Text>
                     </View>
                     <View style={on ? styles.dotOn : styles.dot} />
-                  </Pressable>
+                  </PressableScale>
                 );
               })}
             </View>
@@ -334,7 +372,7 @@ export default function Wallet() {
                 {error ?? "You need at least $1.00 to cash out."}
               </Text>
             )}
-            <Pressable
+            <PressableScale
               style={[styles.confirm, !canConfirm && { opacity: 0.4 }]}
               onPress={confirm}
               disabled={!canConfirm}
@@ -342,21 +380,21 @@ export default function Wallet() {
               testID="cashout-confirm"
             >
               <Text style={styles.confirmText}>Confirm {formatCents(amount)}</Text>
-            </Pressable>
+            </PressableScale>
             <Text style={styles.demo}>Demo cash-out. No real money moves.</Text>
           </View>
         ) : (
           <View style={styles.doneBlock} testID="cashout-done">
-            <Animated.View entering={ZoomIn.duration(500)} style={styles.check}>
+            <Animated.View entering={ZoomIn.springify().damping(11).stiffness(220)} style={styles.check}>
               <Svg width={38} height={38} viewBox="0 0 24 24" fill="none" stroke={colors.up} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M5 12.5l4.5 4.5L19 7.5" />
               </Svg>
             </Animated.View>
             <Text style={styles.doneTitle}>{formatCents(sent)} is on its way</Text>
             <Text style={styles.doneDetail}>Sent to {METHODS[method].name.toLowerCase()}. Demo only, so nothing arrives.</Text>
-            <Pressable style={styles.doneButton} onPress={() => setSheet(false)} accessibilityRole="button" testID="cashout-close">
+            <PressableScale style={styles.doneButton} onPress={() => setSheet(false)} accessibilityRole="button" testID="cashout-close">
               <Text style={styles.actionText}>Done</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         )}
       </Sheet>
@@ -372,12 +410,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     padding: 20,
     gap: 4,
+    zIndex: 2,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: "#2E2B4D",
     backgroundColor: colors.surface,
     backgroundImage: "linear-gradient(150deg, #2B2450 0%, #1A1830 55%, #15151F 100%)",
   },
+  balancePop: { alignSelf: "flex-start", transformOrigin: "left center" },
   balanceLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.tertiary },
   balance: {
     fontFamily: fonts.headingMedium,
@@ -418,7 +458,7 @@ const styles = StyleSheet.create({
   monthValue: { fontFamily: fonts.headingMedium, fontSize: 22, color: colors.text, fontVariant: ["tabular-nums"] },
   tile: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   list: { paddingVertical: 4, gap: 0 },
-  listRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 10 },
+  listRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 10, borderRadius: 14 },
   listDivider: { height: 1, marginLeft: 54, backgroundColor: colors.divider },
   rowTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
   rowDetail: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary },

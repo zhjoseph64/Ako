@@ -1,7 +1,8 @@
 import { useQuery } from "convex/react";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { type GestureResponderEvent, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { PressableScale } from "@/motion";
+import { type GestureResponderEvent, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 
@@ -132,7 +133,7 @@ export function PerformanceChart({ deviceId, now }: { deviceId: string; now: num
           <Text style={styles.title}>Performance</Text>
           <View style={styles.modes} accessibilityRole="tablist">
             {(["points", "rating"] as const).map((key) => (
-              <Pressable
+              <PressableScale
                 key={key}
                 onPress={() => pick({ mode: key })}
                 accessibilityRole="tab"
@@ -144,7 +145,7 @@ export function PerformanceChart({ deviceId, now }: { deviceId: string; now: num
                 <Text style={[styles.modeText, mode === key && { color: colors.ctaText }]}>
                   {key === "points" ? "Points" : "Rating"}
                 </Text>
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
         </View>
@@ -241,7 +242,7 @@ export function PerformanceChart({ deviceId, now }: { deviceId: string; now: num
         {RANGES.map((key) => {
           const on = key === range;
           return (
-            <Pressable
+            <PressableScale
               key={key}
               onPress={() => pick({ range: key })}
               accessibilityRole="button"
@@ -251,7 +252,7 @@ export function PerformanceChart({ deviceId, now }: { deviceId: string; now: num
               testID={`chart-range-${key}`}
             >
               <Text style={[styles.rangeText, on && { color: isPoints ? colors.up : "#C9B8FF" }]}>{key}</Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>

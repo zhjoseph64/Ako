@@ -106,6 +106,38 @@ afterEach(() => {
 });
 
 describe("wallet", () => {
+  test("a public game identity can't be claimed without its game secret", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (ctx) => {
+      const roomId = await ctx.db.insert("jbRooms", {
+        code: "ROOM",
+        hostId: PLAYER.deviceId,
+        ...DEFAULT_BOSS,
+        status: "active",
+        round: 1,
+      });
+      await ctx.db.insert("jbPlayers", {
+        roomId,
+        playerId: PLAYER.deviceId,
+        secret: PLAYER.secret,
+        name: "victim",
+        ring: 2,
+        slot: 0,
+        chatEpoch: 0,
+        lastSeen: Date.now(),
+      });
+    });
+    await expect(
+      t.mutation(api.cashout.wallet.claimWallet, { deviceId: PLAYER.deviceId, secret: OTHER.secret }),
+    ).rejects.toThrow(/belongs to another device/);
+    await t.mutation(api.cashout.wallet.claimWallet, PLAYER);
+
+    await t.mutation(api.platform.profile.ensure, OTHER);
+    await expect(
+      t.mutation(api.cashout.wallet.claimWallet, { deviceId: OTHER.deviceId, secret: PLAYER.secret }),
+    ).rejects.toThrow(/belongs to another device/);
+  });
+
   test("a wallet only answers to the device secret that claimed it", async () => {
     const t = convexTest(schema, modules);
     await t.mutation(api.cashout.wallet.claimWallet, PLAYER);
@@ -158,6 +190,41 @@ describe("Whop account linking", () => {
     expect(decodeURIComponent(reused.headers.get("Location")!.replace(/\+/g, " "))).toContain(
       "already linked to another Ako device",
     );
+  });
+
+  test("links by Whop username using Ako's server key", async () => {
+    const t = convexTest(schema, modules);
+    delete process.env.WHOP_CLIENT_ID;
+    await setupPlayer(t, { linked: false });
+    expect((await earnings(t))?.linkMode).toBe("username");
+    mockWhop((call) =>
+      call.url.endsWith("/users/player")
+        ? json(200, { id: WHOP_USER, username: "player", name: "Player One" })
+        : json(404, { error: { type: "not_found", message: "not found" } }),
+    );
+    await expect(
+      t.action(api.cashout.whop.linkWhopAccount, { ...PLAYER, username: "@nobody" }),
+    ).rejects.toThrow(/No Whop user is named @nobody/);
+    expect(await t.action(api.cashout.whop.linkWhopAccount, { ...PLAYER, username: "@player" })).toEqual({
+      username: "player",
+      name: "Player One",
+    });
+    expect(calls.at(-1)?.headers.authorization).toBe("Bearer test_key");
+    expect((await earnings(t))?.whop).toEqual({ userId: WHOP_USER, username: "player" });
+    await expect(
+      t.action(api.cashout.whop.linkWhopAccount, { ...PLAYER, secret: "x".repeat(48), username: "player" }),
+    ).rejects.toThrow(/another device/);
+  });
+
+  test("allows configured web origins as return links", async () => {
+    const t = convexTest(schema, modules);
+    await setupPlayer(t, { linked: false });
+    await expect(
+      t.mutation(api.cashout.wallet.startWhopLink, { ...PLAYER, returnUrl: "https://ako.app/earnings" }),
+    ).rejects.toThrow(/Invalid return link/);
+    process.env.CASHOUT_WEB_ORIGINS = "https://ako.app";
+    await t.mutation(api.cashout.wallet.startWhopLink, { ...PLAYER, returnUrl: "https://ako.app/earnings" });
+    delete process.env.CASHOUT_WEB_ORIGINS;
   });
 
   test("refuses return links outside the app", async () => {
@@ -262,7 +329,10 @@ describe("cash-out", () => {
       if (call.method === "GET") return json(200, transfer("succeeded"));
       attempt++;
       if (attempt === 1) throw new TypeError("fetch failed");
-      if (attempt === 2) return json(500, { error: { type: "server_error", message: "boom" } });
+      if (attempt === 2) {
+        process.env.WHOP_COMPANY_ID = "biz_changed";
+        return json(500, { error: { type: "server_error", message: "boom" } });
+      }
       if (attempt === 3) return json(409, { error: { type: "conflict", code: "idempotency_request_in_progress", message: "busy" } });
       return json(201, transfer("succeeded"));
     });
@@ -272,6 +342,7 @@ describe("cash-out", () => {
     expect(posts()).toHaveLength(4);
     expect(new Set(posts().map((p) => p.headers["idempotency-key"])).size).toBe(1);
     expect(new Set(posts().map((p) => p.body)).size).toBe(1);
+    expect(JSON.parse(posts()[3].body).origin_id).toBe("biz_ako");
     expect((await earnings(t))?.history[0].status).toBe("transferred");
   });
 
@@ -401,7 +472,21 @@ describe("verified rewards", () => {
 
   test("daily credit cap limits what one device can earn", async () => {
     const t = convexTest(schema, modules);
-    await setupPlayer(t, { credits: 1500 });
-    expect((await earnings(t))?.availableCredits).toBe(1000);
+    await setupPlayer(t, { credits: 900 });
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 300; i++) {
+        await awardCredits(ctx, {
+          deviceId: PLAYER.deviceId,
+          source: "jailbreak",
+          sourceKey: `jailbreak:extra${i}`,
+          credits: 100,
+          note: "extra",
+        });
+      }
+    });
+    const result = await earnings(t);
+    expect(result?.availableCredits).toBe(1000);
+    const rows = await t.run(async (ctx) => await ctx.db.query("cashRewards").collect());
+    expect(rows).toHaveLength(2);
   });
 });

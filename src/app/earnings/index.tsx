@@ -330,6 +330,7 @@ function Line({ label, value, strong }: { label: string; value: string; strong?:
 }
 
 const headerOptions = {
+  headerShown: true,
   title: "Earnings",
   headerStyle: { backgroundColor: colors.bg },
   headerTintColor: colors.text,

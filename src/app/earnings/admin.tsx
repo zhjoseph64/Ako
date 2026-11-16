@@ -26,7 +26,7 @@ export default function CashOutAdmin() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: "Cash-out admin", headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.text }} />
+      <Stack.Screen options={{ headerShown: true, title: "Cash-out admin", headerStyle: { backgroundColor: colors.bg }, headerTintColor: colors.text }} />
       <TextInput
         value={adminKey}
         onChangeText={setAdminKey}

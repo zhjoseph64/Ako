@@ -52,9 +52,11 @@ export const creditPayment = internalMutation({
 });
 
 export const lastPurchase = query({
-  args: { deviceId: v.string() },
+  args: { deviceId: v.string(), secret: v.string() },
   returns: v.union(v.null(), v.object({ tokens: v.number(), createdAt: v.number() })),
   handler: async (ctx, args) => {
+    const profile = await profileByDevice(ctx, args.deviceId);
+    if (!profile || profile.secret !== args.secret) return null;
     const row = await ctx.db
       .query("whopPayments")
       .withIndex("by_deviceId_and_createdAt", (q) => q.eq("deviceId", args.deviceId))

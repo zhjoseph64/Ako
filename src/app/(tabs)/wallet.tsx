@@ -12,7 +12,7 @@ import { TOKEN_PACK } from "../../../convex/whop/pack";
 export default function Wallet() {
   const { me, deviceId, secret, now } = useMe();
   const startCheckout = useAction(api.whop.checkout.start);
-  const lastPurchase = useQuery(api.whop.credit.lastPurchase, deviceId ? { deviceId } : "skip");
+  const lastPurchase = useQuery(api.whop.credit.lastPurchase, deviceId && secret ? { deviceId, secret } : "skip");
   const [state, setState] = useState<"idle" | "opening" | "waiting">("idle");
   const [error, setError] = useState<string | null>(null);
   const [purchaseAtOpen, setPurchaseAtOpen] = useState<number | null>(null);

@@ -18,7 +18,25 @@ The app reads the Convex deployment from `EXPO_PUBLIC_CONVEX_URL`. The committed
 npx tsc --noEmit
 npx expo lint
 npx convex dev --once   # needs CONVEX_DEPLOY_KEY or a logged-in Convex CLI
+npm test                # convex-test suite for cash-out (Whop is mocked)
 ```
+
+## Cash-out (Whop)
+
+Players cash out verified game credits from the Earnings screen. Ako's server sends USD from Ako's Whop company balance to the player's linked Whop balance; the player withdraws to a bank inside Whop. Rates, minimum, fee and the daily credit cap live in `convex/cashout/config.ts`.
+
+Set these on the Convex deployment (`npx convex env set NAME value`), never in the app:
+
+| Variable | Purpose |
+|---|---|
+| `WHOP_API_KEY` | Company API key with `payout:transfer_funds`, `payout:transfer:read` (and `company:balance:read` for the setup check) |
+| `WHOP_COMPANY_ID` | Ako's `biz_` account id, the transfer origin |
+| `WHOP_CLIENT_ID` / `WHOP_CLIENT_SECRET` | Whop OAuth app for Connect Whop; register `<CONVEX_SITE_URL>/whop/oauth/callback` as a redirect URI |
+| `WHOP_ENVIRONMENT` | `sandbox` (default, no real money) or `production` |
+| `CASHOUT_LIVE_TRANSFERS` | Must be `true` before production transfers run |
+| `CASHOUT_ADMIN_KEY` | Unlocks the admin report at `/earnings/admin` |
+
+Check credentials and permissions with `npx convex run cashout/whop:checkSetup`, list redemptions with `npx convex run cashout/admin:serverReport`, and re-drive a stuck one with `npx convex run cashout/whop:recheck '{"redemptionId":"..."}'`.
 
 ## Build for the iOS simulator (Revyl runner)
 

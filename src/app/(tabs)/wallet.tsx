@@ -1,7 +1,8 @@
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
@@ -12,6 +13,7 @@ import { TopBar } from "@/platform/ui";
 import { useMe } from "@/platform/useMe";
 import { dayLabel, GAME_TITLES, startOfDay, startOfMonth } from "@/platform/when";
 import { api } from "../../../convex/_generated/api";
+import { TOKEN_PACK } from "../../../convex/whop/pack";
 
 const MIN_CASH_OUT = 100;
 const METHODS = [
@@ -32,6 +34,36 @@ export default function Wallet() {
   const [sent, setSent] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const startCheckout = useAction(api.whop.checkout.start);
+  const lastPurchase = useQuery(api.whop.credit.lastPurchase, deviceId && secret ? { deviceId, secret } : "skip");
+  const [checkout, setCheckout] = useState<"idle" | "opening" | "waiting">("idle");
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [purchaseAtOpen, setPurchaseAtOpen] = useState<number | null>(null);
+  const credited = lastPurchase && lastPurchase.createdAt > (purchaseAtOpen ?? now - 120_000) ? lastPurchase : null;
+
+  const getTokens = async () => {
+    if (!deviceId || !secret || checkout === "opening") return;
+    setCheckoutError(null);
+    setCheckout("opening");
+    setPurchaseAtOpen(lastPurchase?.createdAt ?? 0);
+    const tab = Platform.OS === "web" ? window.open("", "_blank") : null;
+    try {
+      const url = await startCheckout({
+        deviceId,
+        secret,
+        returnUrl: Platform.OS === "web" ? `${window.location.origin}/wallet` : undefined,
+      });
+      setCheckout("waiting");
+      if (Platform.OS !== "web") await WebBrowser.openBrowserAsync(url);
+      else if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (cause) {
+      tab?.close();
+      setCheckout("idle");
+      setCheckoutError(cause instanceof Error && cause.message.includes("not configured") ? "Whop is not configured yet" : "Could not start checkout. Try again.");
+    }
+  };
 
   const balance = me?.points ?? 0;
   const amounts = [
@@ -135,6 +167,46 @@ export default function Wallet() {
           <Svg width={120} height={40} viewBox="0 0 120 40">
             {spark.length > 1 && <Path d={sparkPath} fill="none" stroke={colors.up} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
           </Svg>
+        </View>
+
+        <View style={styles.month}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.todayTitle}>{formatPoints(TOKEN_PACK.tokens)} token pack</Text>
+            <Text
+              style={[styles.todayDetail, credited && { color: colors.up }, !credited && checkoutError !== null && { color: colors.down }]}
+              testID="wallet-purchase-status"
+            >
+              {credited
+                ? `+${formatPoints(credited.tokens)} points added`
+                : checkout === "waiting"
+                  ? "Waiting for your payment to confirm…"
+                  : (checkoutError ?? `$${TOKEN_PACK.priceUsd.toFixed(2)} · adds ${formatPoints(TOKEN_PACK.tokens)} points · checkout by Whop`)}
+            </Text>
+          </View>
+          <Pressable
+            style={[styles.slotButton, { backgroundColor: colors.accent }, checkout === "opening" && { opacity: 0.7 }]}
+            onPress={getTokens}
+            disabled={!deviceId || !secret || checkout === "opening"}
+            accessibilityRole="button"
+            testID="wallet-get-tokens"
+          >
+            <Text style={[styles.slotButtonText, { color: colors.ctaText }]}>{checkout === "opening" ? "Opening…" : "Get tokens"}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.month}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={styles.todayTitle}>Cash out with Whop</Text>
+            <Text style={styles.todayDetail}>Turn verified game credits into USD in your Whop balance.</Text>
+          </View>
+          <Pressable
+            style={[styles.slotButton, { backgroundColor: colors.raised }]}
+            onPress={() => router.push("/earnings")}
+            accessibilityRole="link"
+            testID="wallet-open-earnings"
+          >
+            <Text style={styles.slotButtonText}>Open Earnings</Text>
+          </Pressable>
         </View>
 
         <View style={styles.activity}>
@@ -301,6 +373,8 @@ const styles = StyleSheet.create({
   },
   monthLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary },
   monthValue: { fontFamily: fonts.headingMedium, fontSize: 22, color: colors.text },
+  slotButton: { height: 44, paddingHorizontal: 16, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  slotButtonText: { fontFamily: fonts.bold, fontSize: 14, color: colors.text },
   activity: { paddingTop: 24, paddingHorizontal: 20 },
   sectionTitle: { fontFamily: fonts.headingMedium, fontSize: 19, color: colors.text, marginBottom: 4 },
   empty: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary, paddingVertical: 12 },

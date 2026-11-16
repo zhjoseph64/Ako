@@ -330,7 +330,14 @@ export const migrateLegacyDefaultBoss = internalMutation({
   handler: async (ctx) => {
     let updated = 0;
     for await (const room of ctx.db.query("jbRooms")) {
-      if (room.instruction !== LEGACY_DEFAULT_INSTRUCTION) continue;
+      const untouched =
+        room.instruction === LEGACY_DEFAULT_INSTRUCTION &&
+        room.bossName === "Ignaroth the Blue-Sworn" &&
+        room.targetDescription === "Make the dragon answer RED." &&
+        room.allowedReply === "BLUE" &&
+        room.winCheckType === "exact" &&
+        room.winCheck === "RED";
+      if (!untouched) continue;
       await ctx.db.patch("jbRooms", room._id, DEFAULT_BOSS);
       await startNewRound(ctx, room);
       updated++;

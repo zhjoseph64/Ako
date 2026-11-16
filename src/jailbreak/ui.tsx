@@ -17,8 +17,10 @@ export function PixelText({
   color = colors.parchment,
   numberOfLines,
   testID,
+  selectable,
 }: {
   testID?: string;
+  selectable?: boolean;
   children: ReactNode;
   style?: StyleProp<TextStyle>;
   size?: number;
@@ -28,6 +30,7 @@ export function PixelText({
   return (
     <Text
       testID={testID}
+      selectable={selectable}
       numberOfLines={numberOfLines}
       style={[{ fontFamily: PIXEL_FONT, fontSize: size, lineHeight: size * 1.6, color }, style]}
     >

@@ -74,7 +74,7 @@ export default function Live() {
           </View>
         </View>
         <Display size={12} color={palette.cyan}>
-          HUMANS VS THE AI
+          HUMANS VS THE SQUID
         </Display>
         <View style={styles.tabs}>
           {(prompts ?? []).map((p, i) => (
@@ -91,7 +91,7 @@ export default function Live() {
             >
               <Display
                 size={10}
-                color={i === selected ? palette.bg : palette.dim}
+                color={i === selected ? palette.ink : palette.dim}
               >
                 {String(i + 1)}
               </Display>
@@ -104,11 +104,11 @@ export default function Live() {
           </Display>
         </PixelBox>
         <View style={styles.legend}>
-          <Body color={palette.cyan} size={20} testID="human-total">
+          <Body color={palette.cyan} size={9} testID="human-total">
             {"■ " + (data?.humans ?? 0) + " humans"}
           </Body>
-          <Body color={palette.pink} size={20}>
-            {"■ " + (data?.ai ?? 0) + " AI samples"}
+          <Body color={palette.pink} size={9}>
+            {"■ " + (data?.ai ?? 0) + " squid guesses"}
           </Body>
         </View>
         <ScrollView contentContainerStyle={styles.rows}>
@@ -118,13 +118,13 @@ export default function Live() {
             return (
               <View key={c._id} style={styles.row}>
                 <View style={styles.rowHead}>
-                  <Body size={24} numberOfLines={1} style={styles.label}>
+                  <Body size={10} numberOfLines={1} style={styles.label}>
                     {c.label}
                   </Body>
-                  <Body size={20} color={palette.cyan}>
+                  <Body size={9} color={palette.cyan}>
                     {Math.round(human * 100) + "%"}
                   </Body>
-                  <Body size={20} color={palette.pink}>
+                  <Body size={9} color={palette.pink}>
                     {Math.round(aiShare * 100) + "%"}
                   </Body>
                 </View>
@@ -153,16 +153,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderWidth: 3,
-    borderColor: palette.border,
+    borderColor: palette.ink,
     backgroundColor: palette.panel,
     alignItems: "center",
     justifyContent: "center",
   },
-  tabOn: { backgroundColor: palette.cyan, borderColor: palette.text },
+  tabOn: { backgroundColor: palette.cyan },
   prompt: { lineHeight: 20 },
   legend: { flexDirection: "row", gap: unit * 5 },
   rows: { gap: unit * 3, paddingBottom: 40 },
-  row: { gap: 3 },
+  row: { gap: unit },
   rowHead: { flexDirection: "row", gap: unit * 3, alignItems: "baseline" },
   label: { flex: 1 },
   bar: { flexDirection: "row", gap: 2 },

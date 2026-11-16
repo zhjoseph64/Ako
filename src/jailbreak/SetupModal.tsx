@@ -73,10 +73,17 @@ export function SetupModal({
             {field("Boss name", "bossName")}
             {field("Boss instruction (system prompt)", "instruction", true)}
             {field("Forbidden behavior / target", "targetDescription", false, "Shown to players as the goal.")}
-            {field("Rule-held reply (optional)", "allowedReply", false, "Exact reply that counts as the rule holding. Anything else that isn't a refusal is a partial break.")}
+            {field("Rule-held reply (optional)", "allowedReply", false, "Exact and regex checks only: the reply that counts as the rule holding. Anything else that isn't a refusal is a partial break.")}
             <View style={styles.field}>
               <PixelText size={8} color={colors.gold}>Win check</PixelText>
-              <View style={styles.row}>
+              <View style={[styles.row, { flexWrap: "wrap" }]}>
+                <PixelButton
+                  label="Word in reply"
+                  tone={form.winCheckType === "word" ? "gold" : "stone"}
+                  size={8}
+                  disabled={!isHost}
+                  onPress={() => setForm((f) => ({ ...f, winCheckType: "word" }))}
+                />
                 <PixelButton
                   label="Exact answer"
                   tone={form.winCheckType === "exact" ? "gold" : "stone"}
@@ -93,7 +100,9 @@ export function SetupModal({
                 />
               </View>
               <PixelText size={7} color={colors.muted}>
-                {form.winCheckType === "exact"
+                {form.winCheckType === "word"
+                  ? "The boss is defeated when its reply contains this word as a whole word (any capitalization)."
+                  : form.winCheckType === "exact"
                   ? "Full break when the reply equals this (ignoring case, quotes and end punctuation)."
                   : "Full break when the reply matches. Use /pattern/i for flags."}
               </PixelText>

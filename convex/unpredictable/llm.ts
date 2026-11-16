@@ -1,7 +1,11 @@
 import { Memory } from "./memory";
 import { clusterKey, sameAnswer, weekday, words } from "./text";
 
-export type Prediction = { guesses: string[]; reason: string; usedMemory: boolean };
+export type Prediction = {
+  guesses: string[];
+  reason: string;
+  usedMemory: boolean;
+};
 export type Verdict = {
   valid: boolean;
   reason: string;
@@ -15,6 +19,8 @@ export function provider(): "openai" | "anthropic" | "stub" {
   return "stub";
 }
 
+const LLM_TIMEOUT_MS = 20000;
+
 async function chatJson(system: string, user: string): Promise<unknown | null> {
   const which = provider();
   if (which === "stub") return null;
@@ -23,6 +29,7 @@ async function chatJson(system: string, user: string): Promise<unknown | null> {
     if (which === "openai") {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
+        signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
         headers: {
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           "Content-Type": "application/json",
@@ -42,6 +49,7 @@ async function chatJson(system: string, user: string): Promise<unknown | null> {
     } else {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
+        signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
         headers: {
           "x-api-key": process.env.ANTHROPIC_API_KEY!,
           "anthropic-version": "2023-06-01",
@@ -102,15 +110,17 @@ function stubPredict(prompt: PredictInput): Prediction {
   };
 }
 
-export async function predictDay(prompts: PredictInput[]): Promise<Prediction[]> {
+export async function predictDay(
+  prompts: PredictInput[],
+): Promise<Prediction[]> {
   const raw = await chatJson(
     [
       "You are the opponent in a game where a player tries to give an answer you cannot predict.",
       "For each prompt, give your three best guesses at what THIS player will answer, each one to four words.",
-      "Use the player's past answers when they are relevant: people are consistent in food, music and habits.",
+      "Use a past answer only when it was given to this same prompt or to one about the same subject; ignore past answers about anything else.",
       "With no relevant history, guess the most common answers people give, and never mention that you lack history or memory.",
       "The three guesses must be three different answers, not rewordings of one.",
-      "Also give one short, playful sentence explaining your guesses. If you used a past answer, cite it with its weekday, like: You said cold pizza on Tuesday, so I bet on leftovers.",
+      "Also give one short, playful sentence explaining your guesses. Only if a past answer on the same subject shaped a guess, set usedMemory to true and cite it with its weekday, like: You said cold pizza on Tuesday, so I bet on leftovers. Otherwise set usedMemory to false and do not mention past answers.",
       'Reply with JSON: {"rounds":[{"guesses":["","",""],"reason":"","usedMemory":false}]} with one entry per prompt, in order.',
     ].join("\n"),
     JSON.stringify(
@@ -123,8 +133,14 @@ export async function predictDay(prompts: PredictInput[]): Promise<Prediction[]>
   const rounds = isRecord(raw) && Array.isArray(raw.rounds) ? raw.rounds : [];
   return prompts.map((prompt, i) => {
     const round: unknown = rounds[i];
-    if (isRecord(round) && Array.isArray(round.guesses) && typeof round.reason === "string") {
-      const guesses = round.guesses.map(shortAnswer).filter((g): g is string => g !== null);
+    if (
+      isRecord(round) &&
+      Array.isArray(round.guesses) &&
+      typeof round.reason === "string"
+    ) {
+      const guesses = round.guesses
+        .map(shortAnswer)
+        .filter((g): g is string => g !== null);
       if (guesses.length >= 3) {
         return {
           guesses: guesses.slice(0, 3),
@@ -137,23 +153,47 @@ export async function predictDay(prompts: PredictInput[]): Promise<Prediction[]>
   });
 }
 
-const NON_ANSWERS = new Set(["idk", "dunno", "nothing", "pass", "skip", "na", "none", "asdf", "no", "yes", "what", "test"]);
+const NON_ANSWERS = new Set([
+  "idk",
+  "dunno",
+  "nothing",
+  "pass",
+  "skip",
+  "na",
+  "none",
+  "asdf",
+  "no",
+  "yes",
+  "what",
+  "test",
+]);
 
-function stubJudge(answer: string, guesses: string[], clusters: string[]): Verdict {
+function stubJudge(
+  answer: string,
+  guesses: string[],
+  clusters: string[],
+): Verdict {
   const key = clusterKey(answer);
   const matched = guesses.findIndex((g) => sameAnswer(g, answer));
   const existing =
-    clusters.find((c) => clusterKey(c) === key) ?? clusters.find((c) => sameAnswer(c, answer));
+    clusters.find((c) => clusterKey(c) === key) ??
+    clusters.find((c) => sameAnswer(c, answer));
   const known = matched !== -1 || existing !== undefined;
   const junk = NON_ANSWERS.has(key) || /^(.)\1+$/.test(key.replace(/ /g, ""));
   if (!/[a-z0-9]/.test(key) || (junk && !known)) {
-    return { valid: false, reason: "That doesn't really answer the prompt.", matchedGuess: null, cluster: "" };
+    return {
+      valid: false,
+      reason: "That doesn't really answer the prompt.",
+      matchedGuess: null,
+      cluster: "",
+    };
   }
   return {
     valid: true,
     reason: "",
     matchedGuess: matched === -1 ? null : matched,
-    cluster: existing ?? (matched === -1 ? answer.toLowerCase() : guesses[matched]),
+    cluster:
+      existing ?? (matched === -1 ? answer.toLowerCase() : guesses[matched]),
   };
 }
 
@@ -181,7 +221,9 @@ export async function judgeAnswer(input: {
   );
   if (isRecord(raw) && typeof raw.valid === "boolean") {
     const matchedGuess =
-      typeof raw.matchedGuess === "number" && raw.matchedGuess >= 0 && raw.matchedGuess < input.guesses.length
+      typeof raw.matchedGuess === "number" &&
+      raw.matchedGuess >= 0 &&
+      raw.matchedGuess < input.guesses.length
         ? Math.floor(raw.matchedGuess)
         : null;
     return {
@@ -194,7 +236,10 @@ export async function judgeAnswer(input: {
   return stubJudge(input.answer, input.guesses, input.clusters);
 }
 
-export async function sampleAnswers(prompt: { text: string; common: string[] }, count: number): Promise<string[]> {
+export async function sampleAnswers(
+  prompt: { text: string; common: string[] },
+  count: number,
+): Promise<string[]> {
   const raw = await chatJson(
     [
       `Imagine ${count} different people independently answering a prompt in one to four words.`,
@@ -204,7 +249,9 @@ export async function sampleAnswers(prompt: { text: string; common: string[] }, 
     prompt.text,
   );
   if (isRecord(raw) && Array.isArray(raw.answers)) {
-    const answers = raw.answers.map(shortAnswer).filter((a): a is string => a !== null);
+    const answers = raw.answers
+      .map(shortAnswer)
+      .filter((a): a is string => a !== null);
     if (answers.length >= count / 2) return answers.slice(0, count);
   }
   const weights = prompt.common.map((_, i) => 1 / (i + 1));

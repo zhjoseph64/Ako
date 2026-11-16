@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -9,6 +10,8 @@ import {
   TextInput,
   View,
 } from "react-native";
+
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useDeviceId } from "@/unpredictable/device";
 import { Heart, Opponent } from "@/unpredictable/sprite";
@@ -44,6 +47,24 @@ export default function UnpredictableHome() {
   const [typed, setName] = useState<string | null>(null);
   const name = typed ?? data?.name ?? "";
   const [busy, setBusy] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const ios = Platform.OS === "ios";
+    const show = Keyboard.addListener(
+      ios ? "keyboardWillShow" : "keyboardDidShow",
+      () => setTyping(true),
+    );
+    const hide = Keyboard.addListener(
+      ios ? "keyboardWillHide" : "keyboardDidHide",
+      () => setTyping(false),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const ready =
     deviceId !== null && data !== undefined && name.trim().length > 0 && !busy;
@@ -65,6 +86,7 @@ export default function UnpredictableHome() {
       <KeyboardAvoidingView
         style={styles.inner}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top}
       >
         <BackLink onPress={() => router.back()} />
         <View style={styles.hero}>
@@ -76,21 +98,23 @@ export default function UnpredictableHome() {
             OUTSMART THE SQUID
           </Display>
         </View>
-        <PixelBox>
-          <View style={styles.rulesHead}>
-            <Body color={palette.gold}>HOW TO PLAY</Body>
-            <View style={styles.hearts}>
-              {[0, 1, 2].map((i) => (
-                <Heart key={i} full />
-              ))}
+        {!typing && (
+          <PixelBox>
+            <View style={styles.rulesHead}>
+              <Body color={palette.gold}>HOW TO PLAY</Body>
+              <View style={styles.hearts}>
+                {[0, 1, 2].map((i) => (
+                  <Heart key={i} full />
+                ))}
+              </View>
             </View>
-          </View>
-          {RULES.map((rule) => (
-            <Body key={rule} color={palette.dim} size={9} style={styles.rule}>
-              {"· " + rule}
-            </Body>
-          ))}
-        </PixelBox>
+            {RULES.map((rule) => (
+              <Body key={rule} color={palette.dim} size={9} style={styles.rule}>
+                {"· " + rule}
+              </Body>
+            ))}
+          </PixelBox>
+        )}
         <View style={styles.form}>
           <PixelBox pad={0} color={palette.cyan} fill={palette.deep}>
             <TextInput
@@ -112,18 +136,20 @@ export default function UnpredictableHome() {
             disabled={!ready}
             onPress={play}
           />
-          <Pressable
-            testID="live-link"
-            accessibilityRole="link"
-            accessibilityLabel="Live room"
-            style={styles.liveRow}
-            onPress={() => router.push("/unpredictable/live")}
-          >
-            <Blink>
-              <View style={styles.liveDot} />
-            </Blink>
-            <Body style={styles.underline}>LIVE ROOM</Body>
-          </Pressable>
+          {!typing && (
+            <Pressable
+              testID="live-link"
+              accessibilityRole="link"
+              accessibilityLabel="Live room"
+              style={styles.liveRow}
+              onPress={() => router.push("/unpredictable/live")}
+            >
+              <Blink>
+                <View style={styles.liveDot} />
+              </Blink>
+              <Body style={styles.underline}>LIVE ROOM</Body>
+            </Pressable>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Screen>

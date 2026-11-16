@@ -18,8 +18,13 @@ export const unpredictableTables = {
     playerId: v.id("unpPlayers"),
     day: v.string(),
     set: v.number(),
-    status: v.union(v.literal("preparing"), v.literal("ready"), v.literal("over")),
+    status: v.union(
+      v.literal("preparing"),
+      v.literal("ready"),
+      v.literal("over"),
+    ),
     lives: v.optional(v.number()),
+    promptIds: v.optional(v.array(v.id("unpPrompts"))),
   }).index("by_playerId_and_day", ["playerId", "day"]),
 
   unpRounds: defineTable({
@@ -45,7 +50,9 @@ export const unpredictableTables = {
     judgeReason: v.optional(v.string()),
     matchedGuess: v.optional(v.number()),
     clusterId: v.optional(v.id("unpClusters")),
-  }).index("by_sessionId_and_index", ["sessionId", "index"]),
+  })
+    .index("by_sessionId_and_index", ["sessionId", "index"])
+    .index("by_playerId", ["playerId"]),
 
   unpClusters: defineTable({
     promptId: v.id("unpPrompts"),

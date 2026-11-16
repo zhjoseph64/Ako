@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { ComponentRef, useEffect, useRef } from "react";
@@ -34,6 +34,7 @@ export default function Result() {
     api.unpredictable.game.summary,
     deviceId ? { deviceId } : "skip",
   );
+  const start = useMutation(api.unpredictable.game.start);
   const card = useRef<ComponentRef<typeof View>>(null);
   const points = useCountUp(summary?.points ?? 0, summary != null, 40);
   const loaded = summary != null;
@@ -43,7 +44,33 @@ export default function Result() {
     if (loaded) buzz(survived ? "win" : "lose");
   }, [loaded, survived]);
 
-  if (!summary) return <Screen>{null}</Screen>;
+  if (summary === undefined) return <Screen>{null}</Screen>;
+  if (summary === null) {
+    return (
+      <Screen>
+        <View style={styles.empty}>
+          <BackLink onPress={() => router.dismissTo("/unpredictable")} />
+          <View style={styles.emptyBody}>
+            <Opponent mood="idle" scale={6} />
+            <Display size={14} style={styles.centerText}>
+              NO RUN YET
+            </Display>
+            <PixelButton
+              label="▼ DIVE IN ▼"
+              testID="result-play"
+              onPress={() => router.dismissTo("/unpredictable")}
+            />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  const again = async () => {
+    if (!deviceId) return;
+    await start({ deviceId });
+    router.replace("/unpredictable/play");
+  };
 
   const share = async () => {
     try {
@@ -153,7 +180,17 @@ export default function Result() {
           </PixelBox>
         </View>
 
-        <PixelButton label="SHARE CARD" onPress={share} testID="share-button" />
+        <PixelButton
+          label={summary.finished ? "▼ PLAY AGAIN ▼" : "CONTINUE RUN ▶"}
+          onPress={again}
+          testID="play-again"
+        />
+        <PixelButton
+          label="SHARE CARD"
+          tone="gold"
+          onPress={share}
+          testID="share-button"
+        />
 
         <View style={styles.list}>
           {summary.rounds
@@ -193,7 +230,7 @@ export default function Result() {
         </Body>
         <PixelButton
           label="LIVE ROOM ▶"
-          tone="gold"
+          tone="pink"
           onPress={() => router.push("/unpredictable/live")}
           testID="live-button"
         />
@@ -204,6 +241,13 @@ export default function Result() {
 
 const styles = StyleSheet.create({
   scroll: { padding: unit * 5, gap: unit * 4 },
+  empty: { flex: 1, padding: unit * 5 },
+  emptyBody: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: unit * 6,
+  },
   capture: { backgroundColor: palette.bg, padding: unit },
   card: { alignItems: "center", gap: unit * 3 },
   centerText: { textAlign: "center" },

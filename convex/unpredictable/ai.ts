@@ -9,10 +9,19 @@ import { AI_SAMPLE_COUNT } from "./seed";
 export const prepare = internalAction({
   args: { sessionId: v.id("unpSessions") },
   handler: async (ctx, args) => {
-    const { playerId, prompts } = await ctx.runQuery(internal.unpredictable.game.prepareContext, args);
-    const memories = await Promise.all(prompts.map((p) => recall(playerId, p.text)));
+    const { playerId, prompts } = await ctx.runQuery(
+      internal.unpredictable.game.prepareContext,
+      args,
+    );
+    const memories = await Promise.all(
+      prompts.map((p) => recall(playerId, p.text)),
+    );
     const predictions = await predictDay(
-      prompts.map((p, i) => ({ text: p.text, common: p.common, memories: memories[i] })),
+      prompts.map((p, i) => ({
+        text: p.text,
+        common: p.common,
+        memories: memories[i],
+      })),
     );
     await ctx.runMutation(internal.unpredictable.game.storeRounds, {
       sessionId: args.sessionId,
@@ -30,7 +39,10 @@ export const prepare = internalAction({
 export const judge = internalAction({
   args: { roundId: v.id("unpRounds") },
   handler: async (ctx, args) => {
-    const { round, day, clusters } = await ctx.runQuery(internal.unpredictable.game.judgeContext, args);
+    const { round, day, clusters } = await ctx.runQuery(
+      internal.unpredictable.game.judgeContext,
+      args,
+    );
     const answer = round.answer ?? "";
     const verdict = await judgeAnswer({
       prompt: round.promptText,
@@ -43,16 +55,23 @@ export const judge = internalAction({
       ...verdict,
     });
     if (verdict.valid) {
-      await remember(round.playerId, round._id, { prompt: round.promptText, answer, day });
+      await remember(round.playerId, round._id, {
+        prompt: round.promptText,
+        answer,
+        day,
+      });
     }
     return null;
   },
 });
 
 export const sampleAll = internalAction({
-  args: {},
-  handler: async (ctx) => {
-    const prompts = await ctx.runQuery(internal.unpredictable.crowd.allPrompts, {});
+  args: { promptIds: v.optional(v.array(v.id("unpPrompts"))) },
+  handler: async (ctx, args) => {
+    const prompts = await ctx.runQuery(
+      internal.unpredictable.crowd.allPrompts,
+      args,
+    );
     for (const prompt of prompts) {
       const answers = await sampleAnswers(prompt, AI_SAMPLE_COUNT);
       await ctx.runMutation(internal.unpredictable.crowd.storeSamples, {

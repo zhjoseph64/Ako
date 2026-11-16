@@ -555,4 +555,51 @@ describe("demo mode", () => {
     expect(posts()).toHaveLength(1);
     expect((await earnings(t))?.history[0]).toMatchObject({ status: "transferred", whopTransferId: "ctt_test1" });
   });
+
+  test("a demo-only Whop link stops counting once demo mode is off", async () => {
+    const t = convexTest(schema, modules);
+    process.env.CASHOUT_DEMO = "true";
+    delete process.env.WHOP_API_KEY;
+    await t.mutation(api.cashout.wallet.claimWallet, PLAYER);
+    await t.action(api.cashout.whop.linkWhopAccount, { ...PLAYER, username: "stage" });
+    await t.run(async (ctx) => {
+      await awardCredits(ctx, { deviceId: PLAYER.deviceId, source: "jailbreak", sourceKey: "jailbreak:demo", credits: 600, note: "seed" });
+    });
+    expect((await earnings(t))?.whop?.userId).toBe("demo_user_stage");
+
+    delete process.env.CASHOUT_DEMO;
+    process.env.WHOP_API_KEY = "test_key";
+    expect((await earnings(t))?.whop).toBeNull();
+    await expect(
+      t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-staleDemoLink00" }),
+    ).rejects.toThrow(/Connect your Whop account/);
+  });
+
+  test("a queued cash-out keeps the mode it was requested in", async () => {
+    const t = convexTest(schema, modules);
+    await setupPlayer(t, { credits: 600 });
+    process.env.CASHOUT_DEMO = "true";
+    mockWhop(happyWhop());
+    await t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-demoThenSwitch0" });
+    delete process.env.CASHOUT_DEMO;
+    await settle(t);
+    expect(calls).toHaveLength(0);
+    const after = await earnings(t);
+    expect(after?.history[0]).toMatchObject({ status: "failed" });
+    expect(after?.availableCredits).toBe(600);
+  });
+
+  test("turning demo on never fakes success for a sandbox send with an unknown outcome", async () => {
+    const t = convexTest(schema, modules);
+    await setupPlayer(t, { credits: 600 });
+    mockWhop(() => {
+      process.env.CASHOUT_DEMO = "true";
+      throw new TypeError("fetch failed");
+    });
+    await t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-sandboxThenDemo" });
+    await settle(t);
+    expect(posts()).toHaveLength(1);
+    expect((await earnings(t))?.history[0]).toMatchObject({ status: "processing", needsReview: true });
+    expect((await earnings(t))?.pendingCredits).toBe(600);
+  });
 });

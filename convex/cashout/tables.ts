@@ -62,6 +62,7 @@ export const cashoutTables = {
     netCents: v.number(),
     currency: v.string(),
     originId: v.string(),
+    demo: v.optional(v.boolean()),
     idempotencyKey: v.string(),
     status: redemptionStatus,
     needsReview: v.boolean(),

@@ -15,6 +15,8 @@ export const CREDIT_REWARDS = {
 
 export const WHOP_API_VERSION_DATE = "2026-11-14-1";
 
+export const DEMO_ID_PREFIX = "demo_";
+
 export type CashOutMode = "sandbox" | "live" | "disabled" | "demo";
 
 export function whopSettings() {

@@ -57,7 +57,7 @@ async function requirePlayer(
     .query("jbPlayers")
     .withIndex("by_roomId_and_playerId", (q) => q.eq("roomId", roomId).eq("playerId", playerId))
     .unique();
-  if (!player) throw new Error("Join the room first");
+  if (!player || player.isBot) throw new Error("Join the room first");
   if (player.secret !== secret) throw new Error("This knight belongs to another device");
   return player;
 }
@@ -131,6 +131,7 @@ export const joinRoom = mutation({
       .withIndex("by_roomId_and_playerId", (q) => q.eq("roomId", room._id).eq("playerId", args.playerId))
       .unique();
     if (existing) {
+      if (existing.isBot) throw new Error("That knight is a demo bot");
       if (existing.secret !== undefined && existing.secret !== args.secret) {
         throw new Error("This knight belongs to another device");
       }

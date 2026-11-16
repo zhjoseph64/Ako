@@ -7,6 +7,8 @@ export const BOT_NAMES = ["Gawain", "Elaine", "Percival"];
 export const BOT_ADAPTER = "demo bot (scripted)";
 const HUMAN_IDLE_MS = 120_000;
 const TICK_STALE_MS = 30_000;
+const ACTIVE_MS = 90_000;
+const MAX_SLOTS = 8;
 const INNERMOST_RING = 1;
 const OUTER_RING = 3;
 
@@ -67,17 +69,29 @@ export const tick = internalMutation({
       .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
       .take(100);
     const now = Date.now();
-    const bots = players.filter((p) => p.isBot);
     const humansHere = players.some(
       (p) => !p.isBot && now - p.lastSeen < HUMAN_IDLE_MS,
     );
-    if (!room.demoBots || !humansHere || bots.length === 0) {
+    if (!room.demoBots || !humansHere || !players.some((p) => p.isBot)) {
       await ctx.db.patch("jbRooms", roomId, { botsTickAt: undefined });
       return null;
     }
     await ctx.db.patch("jbRooms", roomId, { botsTickAt: now });
-    for (const bot of bots)
-      await ctx.db.patch("jbPlayers", bot._id, { lastSeen: now });
+    const taken = new Set(
+      players.filter((p) => now - p.lastSeen < ACTIVE_MS).map((p) => p.slot),
+    );
+    const bots: Doc<"jbPlayers">[] = [];
+    for (const bot of players.filter((p) => p.isBot)) {
+      const active = now - bot.lastSeen < ACTIVE_MS;
+      const slot =
+        active || !taken.has(bot.slot)
+          ? bot.slot
+          : [...Array(MAX_SLOTS).keys()].find((s) => !taken.has(s));
+      if (slot === undefined) continue;
+      taken.add(slot);
+      await ctx.db.patch("jbPlayers", bot._id, { lastSeen: now, slot });
+      bots.push({ ...bot, slot });
+    }
 
     if (room.status === "active") {
       const idle: Doc<"jbPlayers">[] = [];

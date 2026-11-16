@@ -18,6 +18,29 @@ import { useDirector } from "@/jailbreak/useDirector";
 import { VictoryOverlay } from "@/jailbreak/VictoryOverlay";
 
 const ACTIVE_MS = 90_000;
+const PROMPT_FONT = 11;
+const PROMPT_LINE = 17;
+const PROMPT_PADDING = 26;
+const PROMPT_MAX_HEIGHT = PROMPT_PADDING + 5 * PROMPT_LINE;
+
+function wrappedLines(text: string, width: number): number {
+  const paragraphs = text.split("\n");
+  if (paragraphs.length > 1) return paragraphs.reduce((sum, line) => sum + wrappedLines(line, width), 0);
+  const perLine = Math.max(1, Math.floor(width / PROMPT_FONT));
+  let lines = 1;
+  let used = 0;
+  for (const word of text.split(" ")) {
+    const length = word.length + (used > 0 ? 1 : 0);
+    if (used + length <= perLine) {
+      used += length;
+      continue;
+    }
+    lines += used > 0 ? 1 : 0;
+    lines += Math.floor(Math.max(0, word.length - 1) / perLine);
+    used = word.length % perLine || perLine;
+  }
+  return lines;
+}
 
 function errorText(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -55,6 +78,8 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
 
   const [joinError, setJoinError] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [promptWidth, setPromptWidth] = useState(0);
+  const promptHeight = Math.min(PROMPT_MAX_HEIGHT, PROMPT_PADDING + wrappedLines(prompt, promptWidth - PROMPT_PADDING) * PROMPT_LINE);
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<{ text: string; tone: "ok" | "bad"; key: number } | null>(null);
   const [ledgerFor, setLedgerFor] = useState<Doc<"jbPlayers"> | null>(null);
@@ -233,11 +258,22 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
             value={prompt}
             onChangeText={setPrompt}
             onSubmitEditing={send}
+            submitBehavior="blurAndSubmit"
+            onKeyPress={(e) => {
+              const key = e.nativeEvent as { key: string; shiftKey?: boolean; isComposing?: boolean; keyCode?: number };
+              if (Platform.OS !== "web" || key.key !== "Enter" || key.shiftKey) return;
+              if (key.isComposing || key.keyCode === 229) return;
+              e.preventDefault();
+              send();
+            }}
+            multiline
+            scrollEnabled={promptHeight >= PROMPT_MAX_HEIGHT}
+            onLayout={(e) => setPromptWidth(e.nativeEvent.layout.width)}
             placeholder={defeated ? "Boss defeated" : "Whisper your jailbreak…"}
             placeholderTextColor={colors.muted}
             editable={!defeated}
             maxLength={1000}
-            style={styles.input}
+            style={[styles.input, { height: promptHeight }]}
             returnKeyType="send"
             autoCorrect={false}
             spellCheck={false}
@@ -347,18 +383,20 @@ const styles = StyleSheet.create({
   replyScroll: { maxHeight: 96 },
   responseHead: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" },
   tag: { borderWidth: 2, borderColor: colors.ink, paddingHorizontal: 4 },
-  inputRow: { flexDirection: "row", gap: 6, alignItems: "stretch" },
+  inputRow: { flexDirection: "row", gap: 6, alignItems: "flex-end" },
   input: {
     flex: 1,
     minWidth: 0,
     fontFamily: PIXEL_FONT,
-    fontSize: 11,
+    fontSize: PROMPT_FONT,
     color: colors.parchment,
     backgroundColor: colors.night,
     borderWidth: 3,
     borderColor: colors.ink,
     paddingHorizontal: 10,
     paddingVertical: 10,
+    lineHeight: PROMPT_LINE,
+    textAlignVertical: "top",
   },
   toastWrap: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center", paddingHorizontal: 16 },
   toast: { backgroundColor: colors.ink, borderWidth: 3, padding: 10, maxWidth: 520 },

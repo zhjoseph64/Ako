@@ -196,6 +196,11 @@ export default function Play() {
     if (finished) router.replace("/unpredictable/result");
   }, [finished, router]);
 
+  const noSession = data !== undefined && !data?.session;
+  useEffect(() => {
+    if (noSession) router.replace("/unpredictable");
+  }, [noSession, router]);
+
   const round = rounds && cursor !== null ? rounds[cursor] : null;
   const roundId = round?._id ?? null;
   const open = round?.status === "open";

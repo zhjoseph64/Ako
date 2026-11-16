@@ -43,7 +43,27 @@ export default function Result() {
     if (loaded) buzz(survived ? "win" : "lose");
   }, [loaded, survived]);
 
-  if (!summary) return <Screen>{null}</Screen>;
+  if (summary === undefined) return <Screen>{null}</Screen>;
+  if (summary === null) {
+    return (
+      <Screen>
+        <View style={styles.empty}>
+          <BackLink onPress={() => router.dismissTo("/unpredictable")} />
+          <View style={styles.emptyBody}>
+            <Opponent mood="idle" scale={6} />
+            <Display size={14} style={styles.centerText}>
+              NO RUN YET TODAY
+            </Display>
+            <PixelButton
+              label="▼ DIVE IN ▼"
+              testID="result-play"
+              onPress={() => router.dismissTo("/unpredictable")}
+            />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
 
   const share = async () => {
     try {
@@ -204,6 +224,13 @@ export default function Result() {
 
 const styles = StyleSheet.create({
   scroll: { padding: unit * 5, gap: unit * 4 },
+  empty: { flex: 1, padding: unit * 5 },
+  emptyBody: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: unit * 6,
+  },
   capture: { backgroundColor: palette.bg, padding: unit },
   card: { alignItems: "center", gap: unit * 3 },
   centerText: { textAlign: "center" },

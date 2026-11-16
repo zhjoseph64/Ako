@@ -44,7 +44,11 @@ async function latestSession(ctx: QueryCtx, deviceId: string) {
   return { player, session, rounds };
 }
 
-async function ownedRound(ctx: QueryCtx, deviceId: string, roundId: Doc<"unpRounds">["_id"]) {
+async function ownedRound(
+  ctx: QueryCtx,
+  deviceId: string,
+  roundId: Doc<"unpRounds">["_id"],
+) {
   const player = await playerByDevice(ctx, deviceId);
   const round = await ctx.db.get("unpRounds", roundId);
   if (!player || !round || round.playerId !== player._id) return null;
@@ -55,7 +59,8 @@ export const join = mutation({
   args: { deviceId: v.string(), name: v.string() },
   handler: async (ctx, args) => {
     const name = args.name.trim().slice(0, 20);
-    if (!name || args.deviceId.length < 8) throw new Error("A name is required");
+    if (!name || args.deviceId.length < 8)
+      throw new Error("A name is required");
     const player = await playerByDevice(ctx, args.deviceId);
     if (player) {
       await ctx.db.patch("unpPlayers", player._id, { name });
@@ -74,7 +79,9 @@ export const start = mutation({
     const { day, set } = dayInfo(Date.now(), PROMPT_SETS.length);
     const existing = await ctx.db
       .query("unpSessions")
-      .withIndex("by_playerId_and_day", (q) => q.eq("playerId", player._id).eq("day", day))
+      .withIndex("by_playerId_and_day", (q) =>
+        q.eq("playerId", player._id).eq("day", day),
+      )
       .unique();
     if (existing) return null;
 
@@ -82,7 +89,11 @@ export const start = mutation({
     if (!seeded) {
       for (const [setIndex, prompts] of PROMPT_SETS.entries()) {
         for (const [index, prompt] of prompts.entries()) {
-          await ctx.db.insert("unpPrompts", { set: setIndex, index, ...prompt });
+          await ctx.db.insert("unpPrompts", {
+            set: setIndex,
+            index,
+            ...prompt,
+          });
         }
       }
       await ctx.scheduler.runAfter(0, internal.unpredictable.ai.sampleAll, {});
@@ -95,7 +106,9 @@ export const start = mutation({
       status: "preparing",
       lives: START_LIVES,
     });
-    await ctx.scheduler.runAfter(0, internal.unpredictable.ai.prepare, { sessionId });
+    await ctx.scheduler.runAfter(0, internal.unpredictable.ai.prepare, {
+      sessionId,
+    });
     return null;
   },
 });
@@ -149,20 +162,29 @@ export const beginRound = mutation({
         q.eq("sessionId", round.sessionId).lt("index", round.index),
       )
       .take(20);
-    if (earlier.some((r) => r.status !== "done")) throw new Error("Finish the previous round first");
-    await ctx.db.patch("unpRounds", round._id, { status: "open", startedAt: Date.now() });
+    if (earlier.some((r) => r.status !== "done"))
+      throw new Error("Finish the previous round first");
+    await ctx.db.patch("unpRounds", round._id, {
+      status: "open",
+      startedAt: Date.now(),
+    });
     return null;
   },
 });
 
 export const submit = mutation({
-  args: { deviceId: v.string(), roundId: v.id("unpRounds"), answer: v.string() },
+  args: {
+    deviceId: v.string(),
+    roundId: v.id("unpRounds"),
+    answer: v.string(),
+  },
   handler: async (ctx, args) => {
     const round = await ownedRound(ctx, args.deviceId, args.roundId);
     if (!round || round.status !== "open") return null;
     const answer = args.answer.trim().replace(/\s+/g, " ").slice(0, 60);
     const count = words(answer).length;
-    const late = Date.now() > (round.startedAt ?? 0) + ROUND_SECONDS * 1000 + GRACE_MS;
+    const late =
+      Date.now() > (round.startedAt ?? 0) + ROUND_SECONDS * 1000 + GRACE_MS;
     const rejection =
       count === 0
         ? "Time ran out before you answered."
@@ -182,7 +204,9 @@ export const submit = mutation({
       return null;
     }
     await ctx.db.patch("unpRounds", round._id, { status: "judging", answer });
-    await ctx.scheduler.runAfter(0, internal.unpredictable.ai.judge, { roundId: round._id });
+    await ctx.scheduler.runAfter(0, internal.unpredictable.ai.judge, {
+      roundId: round._id,
+    });
     return null;
   },
 });
@@ -203,7 +227,10 @@ export const roundCrowd = query({
       label: mine.label,
       count: mine.humanCount,
       total,
-      percent: Math.max(1, Math.round((mine.humanCount / Math.max(total, 1)) * 100)),
+      percent: Math.max(
+        1,
+        Math.round((mine.humanCount / Math.max(total, 1)) * 100),
+      ),
       bonus: round.outcome === "escaped" && mine.humanCount >= 2,
     };
   },
@@ -212,10 +239,16 @@ export const roundCrowd = query({
 export const ESCAPE_POINTS = 100;
 export const CROWD_BONUS_POINTS = 50;
 
-async function scoreSession(ctx: QueryCtx, session: Doc<"unpSessions">, sessionRounds: Doc<"unpRounds">[]) {
+async function scoreSession(
+  ctx: QueryCtx,
+  session: Doc<"unpSessions">,
+  sessionRounds: Doc<"unpRounds">[],
+) {
   const rounds = [];
   for (const round of sessionRounds) {
-    const cluster = round.clusterId ? await ctx.db.get("unpClusters", round.clusterId) : null;
+    const cluster = round.clusterId
+      ? await ctx.db.get("unpClusters", round.clusterId)
+      : null;
     rounds.push({
       index: round.index,
       prompt: round.promptText,
@@ -228,7 +261,8 @@ async function scoreSession(ctx: QueryCtx, session: Doc<"unpSessions">, sessionR
   const bonus = rounds.filter((r) => r.bonus).length;
   const over = session.status === "over";
   const lives = session.lives ?? START_LIVES;
-  const finished = over || (rounds.length > 0 && rounds.every((r) => r.outcome !== null));
+  const finished =
+    over || (rounds.length > 0 && rounds.every((r) => r.outcome !== null));
   const survived = finished && !over;
   return {
     day: session.day,
@@ -241,12 +275,18 @@ async function scoreSession(ctx: QueryCtx, session: Doc<"unpSessions">, sessionR
     escaped,
     bonus,
     lifePoints: survived ? lives * LIFE_POINTS : 0,
-    points: escaped * ESCAPE_POINTS + bonus * CROWD_BONUS_POINTS + (survived ? lives * LIFE_POINTS : 0),
+    points:
+      escaped * ESCAPE_POINTS +
+      bonus * CROWD_BONUS_POINTS +
+      (survived ? lives * LIFE_POINTS : 0),
     rounds,
   };
 }
 
-async function awardFinishedSession(ctx: MutationCtx, sessionId: Id<"unpSessions">) {
+async function awardFinishedSession(
+  ctx: MutationCtx,
+  sessionId: Id<"unpSessions">,
+) {
   const session = await ctx.db.get("unpSessions", sessionId);
   const player = session && (await ctx.db.get("unpPlayers", session.playerId));
   if (!session || !player) return;
@@ -263,6 +303,16 @@ async function awardFinishedSession(ctx: MutationCtx, sessionId: Id<"unpSessions
     credits: score.points * CREDIT_REWARDS.unpredictableCreditsPerPoint,
     note: `Unpredictable run ${session.day}: ${score.escaped} escaped`,
   });
+  if (score.lifePoints > 0) {
+    await applyAward(ctx, {
+      deviceId: player.deviceId,
+      name: player.name,
+      game: "unpredictable",
+      basePoints: score.lifePoints,
+      ratingDelta: 0,
+      note: `Survived with ${score.lives} ${score.lives === 1 ? "life" : "lives"}`,
+    });
+  }
 }
 
 export const summary = query({
@@ -270,7 +320,10 @@ export const summary = query({
   handler: async (ctx, args) => {
     const found = await latestSession(ctx, args.deviceId);
     if (!found?.session) return null;
-    return { name: found.player.name, ...(await scoreSession(ctx, found.session, found.rounds)) };
+    return {
+      name: found.player.name,
+      ...(await scoreSession(ctx, found.session, found.rounds)),
+    };
   },
 });
 
@@ -327,7 +380,11 @@ export const judgeContext = internalQuery({
       .query("unpClusters")
       .withIndex("by_promptId_and_key", (q) => q.eq("promptId", round.promptId))
       .take(200);
-    return { round, day: session?.day ?? "", clusters: clusters.map((c) => c.label) };
+    return {
+      round,
+      day: session?.day ?? "",
+      clusters: clusters.map((c) => c.label),
+    };
   },
 });
 
@@ -351,10 +408,13 @@ export const finalizeRound = internalMutation({
       await awardFinishedSession(ctx, round.sessionId);
       return null;
     }
-    const key = clusterKey(args.cluster) || clusterKey(round.answer ?? "") || "other";
+    const key =
+      clusterKey(args.cluster) || clusterKey(round.answer ?? "") || "other";
     const existing = await ctx.db
       .query("unpClusters")
-      .withIndex("by_promptId_and_key", (q) => q.eq("promptId", round.promptId).eq("key", key))
+      .withIndex("by_promptId_and_key", (q) =>
+        q.eq("promptId", round.promptId).eq("key", key),
+      )
       .first();
     const clusterId =
       existing?._id ??
@@ -372,11 +432,17 @@ export const finalizeRound = internalMutation({
       )
       .first();
     if (!counted) {
-      await ctx.db.insert("unpClusterPlayers", { clusterId, playerId: round.playerId });
-      await ctx.db.patch("unpClusters", clusterId, { humanCount: (existing?.humanCount ?? 0) + 1 });
+      await ctx.db.insert("unpClusterPlayers", {
+        clusterId,
+        playerId: round.playerId,
+      });
+      await ctx.db.patch("unpClusters", clusterId, {
+        humanCount: (existing?.humanCount ?? 0) + 1,
+      });
     }
     const byCluster = round.guesses.findIndex((g) => clusterKey(g) === key);
-    const matchedGuess = args.matchedGuess ?? (byCluster === -1 ? null : byCluster);
+    const matchedGuess =
+      args.matchedGuess ?? (byCluster === -1 ? null : byCluster);
     const session = await ctx.db.get("unpSessions", round.sessionId);
     if (matchedGuess !== null && session) {
       const lives = Math.max(0, (session.lives ?? START_LIVES) - 1);
@@ -399,7 +465,7 @@ export const finalizeRound = internalMutation({
         deviceId: player.deviceId,
         name: player.name,
         game: "unpredictable",
-        basePoints: escaped ? 120 : 0,
+        basePoints: escaped ? ESCAPE_POINTS : 0,
         ratingDelta: escaped ? 6 : -4,
         note: `${escaped ? "Escaped" : "Predicted"}: ${round.promptText}`,
       });
@@ -422,7 +488,9 @@ export const devReset = internalMutation({
       if (!session) continue;
       const rounds = await ctx.db
         .query("unpRounds")
-        .withIndex("by_sessionId_and_index", (q) => q.eq("sessionId", session._id))
+        .withIndex("by_sessionId_and_index", (q) =>
+          q.eq("sessionId", session._id),
+        )
         .take(20);
       for (const round of rounds) {
         const counted = round.clusterId
@@ -433,7 +501,9 @@ export const devReset = internalMutation({
               )
               .first()
           : null;
-        const cluster = counted ? await ctx.db.get("unpClusters", counted.clusterId) : null;
+        const cluster = counted
+          ? await ctx.db.get("unpClusters", counted.clusterId)
+          : null;
         if (counted && cluster) {
           await ctx.db.delete("unpClusterPlayers", counted._id);
           await ctx.db.patch("unpClusters", cluster._id, {

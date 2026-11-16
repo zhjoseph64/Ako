@@ -3,7 +3,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server";
-import { CASHOUT_RULES, oauthRedirectUri, whopSettings } from "./config";
+import { CASHOUT_RULES, DEMO_ID_PREFIX, oauthRedirectUri, whopSettings, type CashOutMode } from "./config";
 
 const walletArgs = { deviceId: v.string(), secret: v.string() };
 const NATIVE_RETURN_SCHEMES = ["ycapp:", "exp:", "exps:"];
@@ -86,6 +86,12 @@ export const claimWallet = mutation({
   },
 });
 
+function usableWhopUserId(wallet: Doc<"cashWallets">, mode: CashOutMode) {
+  if (!wallet.whopUserId) return null;
+  if (wallet.whopUserId.startsWith(DEMO_ID_PREFIX) && mode !== "demo") return null;
+  return wallet.whopUserId;
+}
+
 async function availableRewards(ctx: QueryCtx, deviceId: string) {
   const rewards = await ctx.db
     .query("cashRewards")
@@ -152,9 +158,11 @@ export const earnings = query({
       mode: settings.mode,
       environment: settings.environment,
       disabledReason: settings.disabledReason,
-      linkMode: settings.linkingEnabled ? ("oauth" as const) : settings.apiKey ? ("username" as const) : null,
+      linkMode: settings.linkingEnabled ? ("oauth" as const) : settings.apiKey || settings.mode === "demo" ? ("username" as const) : null,
       whopWebBase: settings.webBase,
-      whop: wallet.whopUserId ? { userId: wallet.whopUserId, username: wallet.whopUsername ?? null } : null,
+      whop: usableWhopUserId(wallet, settings.mode)
+        ? { userId: wallet.whopUserId!, username: wallet.whopUsername ?? null }
+        : null,
       recentRewards: rewards.slice(0, 8).map((r) => ({
         _id: r._id,
         at: r._creationTime,
@@ -275,7 +283,8 @@ export const requestCashOut = mutation({
 
     const settings = whopSettings();
     if (settings.mode === "disabled") fail(settings.disabledReason ?? "Cash-outs are switched off.");
-    if (!wallet.whopUserId) fail("Connect your Whop account before cashing out.");
+    const whopUserId = usableWhopUserId(wallet, settings.mode);
+    if (!whopUserId) fail("Connect your Whop account before cashing out.");
     if (await inFlightRedemption(ctx, wallet.deviceId)) fail("Your last cash-out is still processing. Wait for it to finish.");
 
     const { rewards, credits } = await availableRewards(ctx, wallet.deviceId);
@@ -288,7 +297,7 @@ export const requestCashOut = mutation({
 
     const redemptionId = await ctx.db.insert("cashRedemptions", {
       deviceId: wallet.deviceId,
-      whopUserId: wallet.whopUserId,
+      whopUserId,
       whopUsername: wallet.whopUsername,
       environment: settings.environment,
       credits,
@@ -298,6 +307,7 @@ export const requestCashOut = mutation({
       netCents,
       currency: CASHOUT_RULES.currency,
       originId: settings.companyId,
+      demo: settings.mode === "demo",
       idempotencyKey,
       status: "pending",
       needsReview: false,

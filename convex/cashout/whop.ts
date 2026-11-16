@@ -3,10 +3,11 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { action, internalAction, type ActionCtx } from "../_generated/server";
-import { oauthRedirectUri, WHOP_API_VERSION_DATE, whopSettings } from "./config";
+import { DEMO_ID_PREFIX, oauthRedirectUri, WHOP_API_VERSION_DATE, whopSettings } from "./config";
 
 const SEND_RETRY_DELAYS_MS = [5_000, 30_000, 120_000, 600_000];
 const RECONCILE_DELAYS_MS = [2_000, 5_000, 15_000, 60_000, 300_000];
+const DEMO_SETTLE_MS = 3_000;
 
 type WhopMoney = { amount: string; currency: string };
 type WhopTransfer = {
@@ -77,8 +78,14 @@ export const sendTransfer = internalAction({
       return null;
     }
     const settings = whopSettings();
-    if (settings.mode === "disabled" || settings.environment !== r.environment) {
-      const reason = settings.disabledReason ?? "Ako's Whop environment changed before this cash-out was sent.";
+    const reason =
+      settings.disabledReason ??
+      (settings.environment !== r.environment
+        ? "Ako's Whop environment changed before this cash-out was sent."
+        : (r.demo ?? false) !== (settings.mode === "demo")
+          ? "Cash-out demo mode was switched before this cash-out was sent."
+          : null);
+    if (reason) {
       if (r.attempts === 0) {
         await ctx.runMutation(internal.cashout.wallet.markFailed, { redemptionId, reason });
       } else {
@@ -88,6 +95,13 @@ export const sendTransfer = internalAction({
     }
     const attempt: number | null = await ctx.runMutation(internal.cashout.wallet.markSending, { redemptionId });
     if (attempt === null) return null;
+
+    if (r.demo) {
+      const whopTransferId = `${DEMO_ID_PREFIX}${redemptionId}`;
+      await ctx.runMutation(internal.cashout.wallet.recordTransfer, { redemptionId, whopTransferId, whopStatus: "processing" });
+      await ctx.scheduler.runAfter(DEMO_SETTLE_MS, internal.cashout.wallet.markTransferred, { redemptionId, whopTransferId });
+      return null;
+    }
 
     let res: Response;
     try {
@@ -148,6 +162,7 @@ export const reconcileTransfer = internalAction({
   handler: async (ctx, { redemptionId }): Promise<null> => {
     const r = await ctx.runQuery(internal.cashout.wallet.transferContext, { redemptionId });
     if (!r || r.status !== "processing" || !r.whopTransferId) return null;
+    if (r.whopTransferId.startsWith(DEMO_ID_PREFIX)) return null;
     const settings = whopSettings();
     let res: Response;
     try {
@@ -200,6 +215,13 @@ export const recheck = internalAction({
   handler: async (ctx, { redemptionId }): Promise<null> => {
     const r = await ctx.runQuery(internal.cashout.wallet.transferContext, { redemptionId });
     if (!r) return null;
+    if (r.whopTransferId?.startsWith(DEMO_ID_PREFIX)) {
+      await ctx.scheduler.runAfter(0, internal.cashout.wallet.markTransferred, {
+        redemptionId,
+        whopTransferId: r.whopTransferId,
+      });
+      return null;
+    }
     await ctx.scheduler.runAfter(
       0,
       r.whopTransferId ? internal.cashout.whop.reconcileTransfer : internal.cashout.whop.sendTransfer,
@@ -220,6 +242,15 @@ export const linkWhopAccount = action({
       secret: args.secret,
     });
     const settings = whopSettings();
+    if (!settings.apiKey && settings.mode === "demo") {
+      const problem: string | null = await ctx.runMutation(internal.cashout.wallet.completeLink, {
+        deviceId,
+        whopUserId: `${DEMO_ID_PREFIX}user_${handle.toLowerCase()}`,
+        whopUsername: handle,
+      });
+      if (problem) throw new ConvexError(problem);
+      return { username: handle, name: null };
+    }
     if (!settings.apiKey) throw new ConvexError("Cash-outs are not set up yet.");
     const res = await fetch(`${settings.apiBase}/users/${encodeURIComponent(handle)}`, {
       headers: headers(settings.apiKey),
@@ -252,6 +283,9 @@ export const checkSetup = internalAction({
       redirectUri: oauthRedirectUri(),
       transferFundsPermission: "not testable without moving money; confirm payout:transfer_funds on the key",
     };
+    if (settings.mode === "demo") {
+      report.demo = "Demo mode: cash-outs are simulated and no real transfers are made. Remove CASHOUT_DEMO to send real sandbox transfers.";
+    }
     if (!settings.apiKey) return report;
     const account = await fetch(`${settings.apiBase}/accounts/me`, { headers: headers(settings.apiKey) });
     if (account.ok) {

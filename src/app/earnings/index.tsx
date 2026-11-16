@@ -10,6 +10,8 @@ import { api } from "../../../convex/_generated/api";
 import { useWalletCredentials } from "@/cashout/credentials";
 import { colors, errorMessage, formatCredits, formatUsd, rateLabel } from "@/cashout/format";
 
+const DEMO_LABEL = "Demo payout: no real money moves";
+
 type Earnings = NonNullable<(typeof api.cashout.wallet.earnings)["_returnType"]>;
 type Redemption = Earnings["history"][number];
 
@@ -131,6 +133,11 @@ export default function EarningsScreen() {
     <View style={styles.screen}>
       <Stack.Screen options={headerOptions} />
       <ScrollView contentContainerStyle={styles.content}>
+        {data.mode === "demo" && (
+          <Text style={[styles.banner, { color: colors.warning, borderColor: colors.warning }]} testID="demo-label">
+            {DEMO_LABEL}
+          </Text>
+        )}
         {data.mode === "sandbox" && (
           <Text style={[styles.banner, { color: colors.warning, borderColor: colors.warning }]}>
             Test mode: transfers use Whop&apos;s sandbox. No real money moves.
@@ -217,18 +224,28 @@ export default function EarningsScreen() {
         {data.history.length === 0 && <Text style={styles.muted}>No cash-outs yet.</Text>}
         {data.history.map((r) => {
           const copy = statusCopy(r);
+          const demo = r.whopTransferId?.startsWith("demo_") ?? false;
           return (
             <View key={r._id} style={styles.row} testID="cash-out-row">
               <View style={styles.rowHead}>
                 <Text style={styles.rowAmount}>{formatUsd(r.netCents)}</Text>
-                <Text style={[styles.status, { color: copy.color }]}>{copy.label}</Text>
+                <Text style={[styles.status, { color: copy.color }]}>{demo ? `${copy.label} (demo)` : copy.label}</Text>
               </View>
               <Text style={styles.muted}>
                 {new Date(r.requestedAt).toLocaleString()} · {formatCredits(r.credits)}
                 {r.environment === "sandbox" ? " · sandbox" : ""}
               </Text>
-              <Text style={styles.secondary}>{copy.detail}</Text>
-              {r.status === "transferred" && (
+              {demo ? (
+                <>
+                  <Text style={[styles.secondary, { color: colors.warning }]}>{DEMO_LABEL}</Text>
+                  <Text style={styles.muted} selectable>
+                    Transfer {r.whopTransferId}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.secondary}>{copy.detail}</Text>
+              )}
+              {r.status === "transferred" && !demo && (
                 <View style={styles.links}>
                   {r.trackingUrl && (
                     <Text style={styles.link} onPress={() => WebBrowser.openBrowserAsync(r.trackingUrl!)}>
@@ -287,6 +304,7 @@ export default function EarningsScreen() {
               This moves money to your Whop balance, not your bank. Withdraw from Whop to send it to your bank.
               {data.mode === "sandbox" ? " Test mode: sandbox money only." : ""}
             </Text>
+            {data.mode === "demo" && <Text style={[styles.hint, { color: colors.warning }]}>{DEMO_LABEL}</Text>}
             {confirmError && <Text style={[styles.hint, { color: colors.down }]}>{confirmError}</Text>}
             <Pressable
               testID="confirm-cash-out"

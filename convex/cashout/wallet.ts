@@ -152,7 +152,7 @@ export const earnings = query({
       mode: settings.mode,
       environment: settings.environment,
       disabledReason: settings.disabledReason,
-      linkMode: settings.linkingEnabled ? ("oauth" as const) : settings.apiKey ? ("username" as const) : null,
+      linkMode: settings.linkingEnabled ? ("oauth" as const) : settings.apiKey || settings.mode === "demo" ? ("username" as const) : null,
       whopWebBase: settings.webBase,
       whop: wallet.whopUserId ? { userId: wallet.whopUserId, username: wallet.whopUsername ?? null } : null,
       recentRewards: rewards.slice(0, 8).map((r) => ({

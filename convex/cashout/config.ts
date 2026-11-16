@@ -15,7 +15,7 @@ export const CREDIT_REWARDS = {
 
 export const WHOP_API_VERSION_DATE = "2026-11-14-1";
 
-export type CashOutMode = "sandbox" | "live" | "disabled";
+export type CashOutMode = "sandbox" | "live" | "disabled" | "demo";
 
 export function whopSettings() {
   const production = process.env.WHOP_ENVIRONMENT === "production";
@@ -24,7 +24,16 @@ export function whopSettings() {
   const companyId = process.env.WHOP_COMPANY_ID ?? "";
   const clientId = process.env.WHOP_CLIENT_ID ?? "";
   const missing = !apiKey || !companyId;
-  const mode: CashOutMode = missing ? "disabled" : production ? (liveSwitch ? "live" : "disabled") : "sandbox";
+  const demo = !production && process.env.CASHOUT_DEMO === "true";
+  const mode: CashOutMode = demo
+    ? "demo"
+    : missing
+      ? "disabled"
+      : production
+        ? liveSwitch
+          ? "live"
+          : "disabled"
+        : "sandbox";
   const disabledReason =
     mode !== "disabled"
       ? null

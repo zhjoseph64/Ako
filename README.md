@@ -34,6 +34,7 @@ Set these on the Convex deployment (`npx convex env set NAME value`), never in t
 | `WHOP_CLIENT_ID` / `WHOP_CLIENT_SECRET` | Whop OAuth app for Connect Whop; register `<CONVEX_SITE_URL>/whop/oauth/callback` as a redirect URI |
 | `WHOP_ENVIRONMENT` | `sandbox` (default, no real money) or `production` |
 | `CASHOUT_LIVE_TRANSFERS` | Must be `true` before production transfers run |
+| `CASHOUT_DEMO` | `true` simulates cash-outs on stage: no Whop transfer is made, credits still reserve and settle, and the app labels every payout "Demo payout: no real money moves". Ignored when `WHOP_ENVIRONMENT=production` |
 | `CASHOUT_ADMIN_KEY` | Unlocks the admin report at `/earnings/admin` |
 
 Check credentials and permissions with `npx convex run cashout/whop:checkSetup`, list redemptions with `npx convex run cashout/admin:serverReport`, and re-drive a stuck one with `npx convex run cashout/whop:recheck '{"redemptionId":"..."}'`.

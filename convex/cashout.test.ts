@@ -97,6 +97,7 @@ beforeEach(() => {
   process.env.CONVEX_SITE_URL = "https://ako.convex.site";
   process.env.CASHOUT_ADMIN_KEY = "admin-secret";
   delete process.env.CASHOUT_LIVE_TRANSFERS;
+  delete process.env.CASHOUT_DEMO;
   delete process.env.WHOP_CLIENT_SECRET;
 });
 
@@ -488,5 +489,70 @@ describe("verified rewards", () => {
     expect(result?.availableCredits).toBe(1000);
     const rows = await t.run(async (ctx) => await ctx.db.query("cashRewards").collect());
     expect(rows).toHaveLength(2);
+  });
+});
+
+describe("demo mode", () => {
+  test("settles a cash-out through the real bookkeeping without calling Whop", async () => {
+    const t = convexTest(schema, modules);
+    process.env.CASHOUT_DEMO = "true";
+    delete process.env.WHOP_API_KEY;
+    delete process.env.WHOP_COMPANY_ID;
+    delete process.env.WHOP_CLIENT_ID;
+    mockWhop(() => {
+      throw new Error("Whop must not be called in demo mode");
+    });
+    await t.mutation(api.cashout.wallet.claimWallet, PLAYER);
+    expect((await earnings(t))?.mode).toBe("demo");
+    expect((await earnings(t))?.linkMode).toBe("username");
+    expect(await t.action(api.cashout.whop.linkWhopAccount, { ...PLAYER, username: "@stage" })).toEqual({
+      username: "stage",
+      name: null,
+    });
+    await t.run(async (ctx) => {
+      await awardCredits(ctx, { deviceId: PLAYER.deviceId, source: "jailbreak", sourceKey: "jailbreak:demo", credits: 600, note: "seed" });
+    });
+
+    const id = await t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-demodemodemodemo" });
+    vi.advanceTimersByTime(1);
+    await t.finishInProgressScheduledFunctions();
+    const processing = await earnings(t);
+    expect(processing?.history[0]).toMatchObject({ status: "processing", whopTransferId: `demo_${id}` });
+    expect(processing?.pendingCredits).toBe(600);
+
+    await t.action(internal.cashout.whop.reconcileTransfer, { redemptionId: id });
+    await settle(t);
+    const done = await earnings(t);
+    expect(done?.history[0]).toMatchObject({ status: "transferred", whopTransferId: `demo_${id}` });
+    expect(done).toMatchObject({ availableCredits: 0, pendingCredits: 0, redeemedCredits: 600 });
+    expect(calls).toHaveLength(0);
+    expect((await t.action(internal.cashout.whop.checkSetup, {})).mode).toBe("demo");
+  });
+
+  test("is ignored in production", async () => {
+    const t = convexTest(schema, modules);
+    await setupPlayer(t, { credits: 600 });
+    process.env.CASHOUT_DEMO = "true";
+    process.env.WHOP_ENVIRONMENT = "production";
+    expect((await earnings(t))?.mode).toBe("disabled");
+    await expect(
+      t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-proddemoproddemo" }),
+    ).rejects.toThrow(/Live cash-outs are switched off/);
+    process.env.CASHOUT_LIVE_TRANSFERS = "true";
+    expect((await earnings(t))?.mode).toBe("live");
+  });
+
+  test("removing CASHOUT_DEMO restores real sandbox transfers", async () => {
+    const t = convexTest(schema, modules);
+    await setupPlayer(t, { credits: 600 });
+    process.env.CASHOUT_DEMO = "true";
+    expect((await earnings(t))?.mode).toBe("demo");
+    delete process.env.CASHOUT_DEMO;
+    expect((await earnings(t))?.mode).toBe("sandbox");
+    mockWhop(happyWhop());
+    await t.mutation(api.cashout.wallet.requestCashOut, { ...PLAYER, requestId: "req-backtosandbox00" });
+    await settle(t);
+    expect(posts()).toHaveLength(1);
+    expect((await earnings(t))?.history[0]).toMatchObject({ status: "transferred", whopTransferId: "ctt_test1" });
   });
 });

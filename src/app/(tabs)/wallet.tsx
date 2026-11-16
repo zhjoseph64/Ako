@@ -42,8 +42,8 @@ export default function Wallet() {
   const [coins, setCoins] = useState({ burst: 0, drain: false });
   const pop = useSharedValue(1);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }] }));
-  const onRoll = (from: number, to: number) => {
-    if (from === 0) return;
+  const onRoll = (from: number, to: number, changed: boolean) => {
+    if (!changed) return;
     setCoins((last) => ({ burst: last.burst + 1, drain: to < from }));
     if (to > from) pop.set(withDelay(520, withSequence(withTiming(1.06, { duration: duration.fast }), withSpring(1, spring.pop))));
   };

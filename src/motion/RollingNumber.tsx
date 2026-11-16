@@ -71,18 +71,18 @@ export function RollingNumber({
   style?: StyleProp<TextStyle>;
   placeholder?: string;
   testID?: string;
-  onRoll?: (from: number, to: number) => void;
+  onRoll?: (from: number, to: number, changed: boolean) => void;
 }) {
   const reduced = useReducedMotion();
   const shared = useSharedValue(0);
   const digitWidth = useSharedValue(0);
   const [shown, setShown] = useState<{ value: number | null; epoch: number }>({ value: null, epoch: -1 });
-  const [rolling, setRolling] = useState<{ from: number; to: number } | null>(null);
+  const [rolling, setRolling] = useState<{ from: number; to: number; changed: boolean } | null>(null);
 
   if (value !== undefined && active && (shown.value !== value || shown.epoch !== epoch)) {
     const from = shown.epoch !== epoch ? (shown.value !== null && shown.value !== value ? shown.value : 0) : (shown.value ?? 0);
     setShown({ value, epoch });
-    if (from !== value && !reduced) setRolling({ from, to: value });
+    if (from !== value && !reduced) setRolling({ from, to: value, changed: shown.value !== null && shown.value !== value });
   }
 
   useLayoutEffect(() => {
@@ -91,7 +91,7 @@ export function RollingNumber({
       setRolling((current) => (current === rolling ? null : current));
       haptic("tick");
     };
-    onRoll?.(rolling.from, rolling.to);
+    onRoll?.(rolling.from, rolling.to, rolling.changed);
     shared.set(rolling.from);
     shared.set(
       withTiming(rolling.to, { duration: duration.count, easing: easing.out }, (finished) => {

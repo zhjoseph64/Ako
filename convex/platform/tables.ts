@@ -6,6 +6,7 @@ export const platGame = v.union(
   v.literal("jailbreak"),
   v.literal("leaderboard"),
   v.literal("cashout"),
+  v.literal("purchase"),
 );
 
 export const platAvatar = v.object({ color: v.string(), frame: v.string(), aura: v.string() });

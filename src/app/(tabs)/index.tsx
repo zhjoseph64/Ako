@@ -14,8 +14,7 @@ import { colors, fonts, formatPoints, radii, space } from "@/platform/theme";
 import { Toast } from "@/platform/Toast";
 import { useMe } from "@/platform/useMe";
 import { api } from "../../../convex/_generated/api";
-import { PROMPT_SETS } from "../../../convex/unpredictable/seed";
-import { dayInfo } from "../../../convex/unpredictable/text";
+import { RUN_LENGTH } from "../../../convex/unpredictable/seed";
 
 function IconButton({ children, onPress, label }: { children: ReactNode; onPress: () => void; label: string }) {
   return (
@@ -71,13 +70,12 @@ function FeaturedCard({ arena }: { arena: Arena }) {
   );
 }
 
-function useUnpredictableProgress(deviceId: string | null, now: number) {
+function useUnpredictableProgress(deviceId: string | null) {
   const summary = useQuery(api.unpredictable.game.summary, deviceId ? { deviceId } : "skip");
-  const { day, set } = dayInfo(now, PROMPT_SETS.length);
-  const today = summary && summary.day === day ? summary : null;
-  const total = today?.total || PROMPT_SETS[set].length;
-  const outcomes = Array.from({ length: total }, (_, i) => today?.rounds[i]?.outcome ?? null);
-  return { outcomes, done: outcomes.filter((o) => o !== null).length, total, finished: !!today?.finished };
+  const run = summary && !summary.finished ? summary : null;
+  const total = run?.total || RUN_LENGTH;
+  const outcomes = Array.from({ length: total }, (_, i) => run?.rounds[i]?.outcome ?? null);
+  return { outcomes, done: outcomes.filter((o) => o !== null).length, total };
 }
 
 const BAR_COLOR = { escaped: colors.up, predicted: colors.down, void: "#4A4766" } as const;
@@ -133,16 +131,15 @@ export default function Home() {
   const { deviceId, now, me } = useMe();
   const live = useQuery(api.platform.leaderboard.liveCounts, { now });
   const arena = useQuery(api.platform.home.jailbreakArena, { now });
-  const unpredictable = useUnpredictableProgress(deviceId, now);
+  const unpredictable = useUnpredictableProgress(deviceId);
   const [toast, setToast] = useState<string | null>(null);
   const clearToast = useCallback(() => setToast(null), []);
 
   const metaFor = (game: Game) => {
     if (game.live === "unpredictable") {
-      if (unpredictable.finished) return "Done for today";
       if (unpredictable.done > 0) return `${unpredictable.done} of ${unpredictable.total} done`;
       const playing = live?.unpredictable ?? 0;
-      return playing > 0 ? `${playing} playing` : "Daily · new prompts";
+      return playing > 0 ? `${playing} playing` : "New prompts every run";
     }
     if (game.live === "jailbreak") {
       const playing = Math.max(arena?.knights ?? 0, live?.jailbreak ?? 0);
@@ -153,7 +150,7 @@ export default function Home() {
 
   const open = (game: Game) => {
     if (!game.href) return setToast(`${game.title} is coming soon`);
-    router.push(game.live === "unpredictable" && unpredictable.finished ? "/unpredictable/result" : game.href);
+    router.push(game.href);
   };
 
   return (

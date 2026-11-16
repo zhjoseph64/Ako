@@ -11,7 +11,9 @@ export function clusterKey(text: string): string {
     .replace(/[^a-z0-9\s]/g, "")
     .split(/\s+/)
     .filter((t) => t && !STOPWORDS.has(t))
-    .map((t) => (t.length > 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t));
+    .map((t) =>
+      t.length > 3 && t.endsWith("s") && !t.endsWith("ss") ? t.slice(0, -1) : t,
+    );
   return tokens.join(" ");
 }
 
@@ -36,7 +38,15 @@ export function dayInfo(now: number, setCount: number) {
   };
 }
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 export function weekday(day: string): string {
   return WEEKDAYS[new Date(day + "T00:00:00Z").getUTCDay()];

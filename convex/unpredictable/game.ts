@@ -13,13 +13,15 @@ import {
 import { CREDIT_REWARDS } from "../cashout/config";
 import { awardCredits } from "../cashout/rewards";
 import { applyAward } from "../platform/award";
-import { PROMPT_SETS } from "./seed";
+import { PROMPT_POOL, PROMPT_SETS, RUN_LENGTH } from "./seed";
 import { clusterKey, dayInfo, words } from "./text";
 
 export const ROUND_SECONDS = 15;
 export const START_LIVES = 3;
 export const LIFE_POINTS = 25;
 const GRACE_MS = 5000;
+const PREPARE_TIMEOUT_MS = 60000;
+const SAMPLE_BATCH = 10;
 
 async function playerByDevice(ctx: QueryCtx, deviceId: string) {
   return await ctx.db
@@ -74,37 +76,70 @@ export const join = mutation({
 export const start = mutation({
   args: { deviceId: v.string() },
   handler: async (ctx, args) => {
-    const player = await playerByDevice(ctx, args.deviceId);
-    if (!player) throw new Error("Join first");
-    const { day, set } = dayInfo(Date.now(), PROMPT_SETS.length);
-    const existing = await ctx.db
-      .query("unpSessions")
-      .withIndex("by_playerId_and_day", (q) =>
-        q.eq("playerId", player._id).eq("day", day),
-      )
-      .unique();
-    if (existing) return null;
-
-    const seeded = await ctx.db.query("unpPrompts").first();
-    if (!seeded) {
-      for (const [setIndex, prompts] of PROMPT_SETS.entries()) {
-        for (const [index, prompt] of prompts.entries()) {
-          await ctx.db.insert("unpPrompts", {
-            set: setIndex,
-            index,
-            ...prompt,
-          });
-        }
-      }
-      await ctx.scheduler.runAfter(0, internal.unpredictable.ai.sampleAll, {});
+    const latest = await latestSession(ctx, args.deviceId);
+    if (!latest) throw new Error("Join first");
+    const { player, session: current, rounds } = latest;
+    if (
+      current?.status === "preparing" &&
+      Date.now() - current._creationTime < PREPARE_TIMEOUT_MS
+    ) {
+      return null;
     }
+    if (
+      current?.status === "ready" &&
+      rounds.some((r) => r.outcome === undefined)
+    )
+      return null;
 
+    const pool = await ctx.db.query("unpPrompts").take(1000);
+    const known = new Set(pool.map((p) => p.text));
+    const promptIds = pool.map((p) => p._id);
+    const added: Id<"unpPrompts">[] = [];
+    for (const [i, prompt] of PROMPT_POOL.entries()) {
+      if (known.has(prompt.text)) continue;
+      added.push(
+        await ctx.db.insert("unpPrompts", {
+          set: Math.floor(i / RUN_LENGTH),
+          index: i % RUN_LENGTH,
+          ...prompt,
+        }),
+      );
+    }
+    for (let i = 0; i < added.length; i += SAMPLE_BATCH) {
+      await ctx.scheduler.runAfter(0, internal.unpredictable.ai.sampleAll, {
+        promptIds: added.slice(i, i + SAMPLE_BATCH),
+      });
+    }
+    promptIds.push(...added);
+
+    const history = await ctx.db
+      .query("unpRounds")
+      .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+      .order("desc")
+      .take(2000);
+    const lastSeen = new Map<Id<"unpPrompts">, number>();
+    for (const round of history) {
+      if (round.status !== "sealed" && !lastSeen.has(round.promptId)) {
+        lastSeen.set(round.promptId, round._creationTime);
+      }
+    }
+    const shuffled = promptIds
+      .map((id) => ({ id, order: Math.random() }))
+      .sort((x, y) => x.order - y.order)
+      .map((entry) => entry.id);
+    const unseen = shuffled.filter((id) => !lastSeen.has(id));
+    const seen = shuffled
+      .filter((id) => lastSeen.has(id))
+      .sort((x, y) => lastSeen.get(x)! - lastSeen.get(y)!);
+
+    const { day, set } = dayInfo(Date.now(), PROMPT_SETS.length);
     const sessionId = await ctx.db.insert("unpSessions", {
       playerId: player._id,
       day,
       set,
       status: "preparing",
       lives: START_LIVES,
+      promptIds: [...unseen, ...seen].slice(0, RUN_LENGTH),
     });
     await ctx.scheduler.runAfter(0, internal.unpredictable.ai.prepare, {
       sessionId,
@@ -332,11 +367,25 @@ export const prepareContext = internalQuery({
   handler: async (ctx, args) => {
     const session = await ctx.db.get("unpSessions", args.sessionId);
     if (!session) throw new Error("Session not found");
-    const prompts = await ctx.db
-      .query("unpPrompts")
-      .withIndex("by_set_and_index", (q) => q.eq("set", session.set))
-      .take(10);
-    return { playerId: session.playerId, prompts };
+    const picked = session.promptIds
+      ? await Promise.all(
+          session.promptIds.map((id) => ctx.db.get("unpPrompts", id)),
+        )
+      : await ctx.db
+          .query("unpPrompts")
+          .withIndex("by_set_and_index", (q) => q.eq("set", session.set))
+          .take(RUN_LENGTH);
+    return {
+      playerId: session.playerId,
+      prompts: picked
+        .filter((p) => p !== null)
+        .map((p, index) => ({
+          _id: p._id,
+          index,
+          text: p.text,
+          common: p.common,
+        })),
+    };
   },
 });
 

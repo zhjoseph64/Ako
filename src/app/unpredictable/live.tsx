@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
+import { useDeviceId } from "@/unpredictable/device";
 import { palette, unit } from "@/unpredictable/theme";
 import {
   BackLink,
@@ -41,7 +42,11 @@ function Bar(props: { share: number; max: number; color: string }) {
 export default function Live() {
   const router = useRouter();
   const [now] = useState(() => Date.now());
-  const prompts = useQuery(api.unpredictable.crowd.prompts, { now });
+  const deviceId = useDeviceId();
+  const prompts = useQuery(api.unpredictable.crowd.prompts, {
+    now,
+    deviceId: deviceId ?? undefined,
+  });
   const [selected, setSelected] = useState(0);
   const prompt = prompts?.[selected];
   const data = useQuery(

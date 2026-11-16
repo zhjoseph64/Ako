@@ -469,7 +469,7 @@ export default function Play() {
         </PixelBox>
         <Body
           color={tooLong ? palette.gold : palette.dim}
-          size={9}
+          size={8}
           style={styles.hint}
         >
           {tooLong

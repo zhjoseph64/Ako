@@ -15,6 +15,36 @@ const KNIGHT_H = 20;
 const KNIGHT_PX = 3.2;
 const DRAGON_PX = 2.7;
 const CROP = { x: 60, y: 140, w: 904, h: 590 };
+const DRAGON_BOX = { x0: 312, y0: 100, x1: 712, y1: 420 };
+const CAMERA_MS = 700;
+
+type Box = { x0: number; y0: number; x1: number; y1: number };
+
+function union(boxes: Box[]): Box {
+  return {
+    x0: Math.min(...boxes.map((b) => b.x0)),
+    y0: Math.min(...boxes.map((b) => b.y0)),
+    x1: Math.max(...boxes.map((b) => b.x1)),
+    y1: Math.max(...boxes.map((b) => b.y1)),
+  };
+}
+
+function knightBox(pos: { x: number; y: number }): Box {
+  return { x0: pos.x - 85, y0: pos.y - 90, x1: pos.x + 85, y1: pos.y + 40 };
+}
+
+function camera(box: Box, width: number, height: number, scale: number, zMin: number, zMax: number) {
+  const z = Math.min(zMax, Math.max(zMin, Math.min(width / ((box.x1 - box.x0) * scale), height / ((box.y1 - box.y0) * scale))));
+  const viewW = width / (scale * z);
+  const viewH = height / (scale * z);
+  const clamp = (center: number, view: number, size: number) =>
+    view >= size ? size / 2 : Math.min(size - view / 2, Math.max(view / 2, center));
+  return {
+    z,
+    cx: clamp((box.x0 + box.x1) / 2, viewW, STAGE_WIDTH),
+    cy: clamp((box.y0 + box.y1) / 2, viewH, STAGE_HEIGHT),
+  };
+}
 
 function truncate(text: string, max: number) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
@@ -226,13 +256,14 @@ export function Arena({
   winnerName?: string;
   onSelectPlayer: (player: Player) => void;
 }) {
-  const scale = Math.min(width / CROP.w, height / CROP.h);
+  const scale = Math.max(height / STAGE_HEIGHT, Math.min(height / 560, width / 600));
   const stageW = STAGE_WIDTH * scale;
   const stageH = STAGE_HEIGHT * scale;
   const boost = Math.min(2.2, Math.max(1.2, 0.95 / scale));
   const knightPixel = KNIGHT_PX * scale * boost;
-  const visibleLeft = CROP.x * scale;
-  const visibleRight = (CROP.x + CROP.w) * scale;
+  const visibleLeft = 0;
+  const visibleRight = stageW;
+  const zMin = Math.min(1, Math.min(width / CROP.w, height / CROP.h) / scale);
   const [expiredBubble, setExpiredBubble] = useState<number | null>(null);
   const bubbleKey = director.bubble?.key ?? null;
   const bubbleVisible = bubbleKey !== null && bubbleKey !== expiredBubble;
@@ -250,6 +281,58 @@ export function Arena({
     return player ? ringPosition(ringOf(player), player.slot) : { x: 512, y: 700 };
   };
   const dragonTarget = { x: DRAGON_ANCHOR.x, y: DRAGON_ANCHOR.y - 70 };
+
+  const attacker = director.flights[0]?.playerId ?? director.launches[0]?.playerId;
+  const shot = director.defeatShown || director.dragon.anim === "defeat"
+    ? camera(DRAGON_BOX, width, height, scale, 1.25, 1.45)
+    : director.fireball
+      ? camera(union([DRAGON_BOX, knightBox(posOf(director.fireball.playerId))]), width, height, scale, zMin, 1.35)
+      : attacker
+        ? camera(union([DRAGON_BOX, knightBox(posOf(attacker))]), width, height, scale, zMin, 1.2)
+        : camera(union([DRAGON_BOX, ...players.map((p) => knightBox(posOf(p.playerId)))]), width, height, scale, zMin, 1);
+  const [cam] = useState(() => ({
+    z: new Animated.Value(shot.z),
+    cx: new Animated.Value(shot.cx),
+    cy: new Animated.Value(shot.cy),
+    breath: new Animated.Value(0),
+    shake: new Animated.Value(0),
+  }));
+  const { z: shotZ, cx: shotX, cy: shotY } = shot;
+  useEffect(() => {
+    const easing = Easing.out(Easing.cubic);
+    const move = (value: Animated.Value, toValue: number) =>
+      Animated.timing(value, { toValue, duration: CAMERA_MS, easing, useNativeDriver: true });
+    Animated.parallel([move(cam.z, shotZ), move(cam.cx, shotX), move(cam.cy, shotY)]).start();
+  }, [cam, shotZ, shotX, shotY]);
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cam.breath, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(cam.breath, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [cam]);
+  const hitKey = director.hitPlayer?.key;
+  useEffect(() => {
+    if (hitKey === undefined) return;
+    cam.shake.setValue(0);
+    Animated.sequence(
+      [8, -7, 5, -3, 0].map((toValue) => Animated.timing(cam.shake, { toValue, duration: 55, useNativeDriver: true })),
+    ).start();
+  }, [cam, hitKey]);
+  const zoom = Animated.multiply(cam.z, cam.breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] }));
+  const centerX = stageW / 2;
+  const centerY = stageH / 2;
+  const translateX = Animated.add(
+    Animated.subtract(width / 2 - centerX, Animated.multiply(zoom, Animated.subtract(Animated.multiply(cam.cx, scale), centerX))),
+    cam.shake,
+  );
+  const translateY = Animated.subtract(
+    height / 2 - centerY,
+    Animated.multiply(zoom, Animated.subtract(Animated.multiply(cam.cy, scale), centerY)),
+  );
   const dScale = DRAGON_PX * scale * Math.min(1.4, boost);
   const dragonTop = DRAGON_ANCHOR.y * scale - DRAGON_ANCHOR_PX.y * dScale;
   const bubbleFont = Math.max(8, Math.round(10 * scale + 1));
@@ -263,8 +346,29 @@ export function Arena({
   const bossText = director.thinking && !bubbleVisible ? "..." : bubbleVisible && director.bubble ? director.bubble.text : null;
 
   return (
-    <View style={{ width: CROP.w * scale, height: CROP.h * scale, overflow: "hidden" }}>
-      <View style={{ position: "absolute", left: -visibleLeft, top: -CROP.y * scale, width: stageW, height: stageH }}>
+    <View style={{ width, height, overflow: "hidden", backgroundColor: "#120a10" }}>
+      <Image
+        source={ARENA_IMAGE}
+        blurRadius={6}
+        style={{
+          position: "absolute",
+          opacity: 0.45,
+          width: STAGE_WIDTH * Math.max(width / STAGE_WIDTH, height / STAGE_HEIGHT),
+          height: STAGE_HEIGHT * Math.max(width / STAGE_WIDTH, height / STAGE_HEIGHT),
+          left: (width - STAGE_WIDTH * Math.max(width / STAGE_WIDTH, height / STAGE_HEIGHT)) / 2,
+          top: (height - STAGE_HEIGHT * Math.max(width / STAGE_WIDTH, height / STAGE_HEIGHT)) / 2,
+        }}
+      />
+      <Animated.View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: stageW,
+          height: stageH,
+          transform: [{ translateX }, { translateY }, { scale: zoom }],
+        }}
+      >
       <Image source={ARENA_IMAGE} style={{ position: "absolute", width: stageW, height: stageH }} />
       {drawables.map((d) =>
         d.kind === "dragon" ? (
@@ -352,7 +456,7 @@ export function Arena({
         </View>
       )}
 
-      </View>
+      </Animated.View>
 
       {director.label && (
         <ResultBanner

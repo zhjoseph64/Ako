@@ -3,13 +3,14 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { RankBadge } from "@/platform/RankBadge";
 import { colors, fonts, formatPoints } from "@/platform/theme";
-import { Avatar, Body, Heading, Screen } from "@/platform/ui";
-import { useDeviceId } from "@/unpredictable/device";
+import { Avatar } from "@/platform/Avatar";
+import { Body, Heading, Screen } from "@/platform/ui";
+import { useMe } from "@/platform/useMe";
 import { api } from "../../../convex/_generated/api";
 
 export default function Leaderboard() {
-  const deviceId = useDeviceId();
-  const board = useQuery(api.platform.leaderboard.leaderboard, deviceId ? { deviceId } : "skip");
+  const { deviceId, now } = useMe();
+  const board = useQuery(api.platform.leaderboard.leaderboard, { deviceId: deviceId ?? undefined, now });
 
   return (
     <Screen testID="leaderboard">

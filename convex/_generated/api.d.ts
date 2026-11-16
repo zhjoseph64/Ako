@@ -15,6 +15,7 @@ import type * as jailbreak_roomCode from "../jailbreak/roomCode.js";
 import type * as jailbreak_rooms from "../jailbreak/rooms.js";
 import type * as jailbreak_tables from "../jailbreak/tables.js";
 import type * as platform_award from "../platform/award.js";
+import type * as platform_home from "../platform/home.js";
 import type * as platform_leaderboard from "../platform/leaderboard.js";
 import type * as platform_profile from "../platform/profile.js";
 import type * as platform_ranks from "../platform/ranks.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   "jailbreak/rooms": typeof jailbreak_rooms;
   "jailbreak/tables": typeof jailbreak_tables;
   "platform/award": typeof platform_award;
+  "platform/home": typeof platform_home;
   "platform/leaderboard": typeof platform_leaderboard;
   "platform/profile": typeof platform_profile;
   "platform/ranks": typeof platform_ranks;

@@ -37,7 +37,7 @@ function Art({ kind }: { kind: GameArtKind }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <G rotation={-8} origin="125, 100">
+          <G transform="rotate(-8 125 100)">
             <Path d="M104 70 Q100 104 108 112 H150 Q154 104 148 70 Z" fill="url(#ga-snap)" />
             <Path
               d="M106 112 L100 140 M150 112 L156 140 M112 112 L114 134 M144 112 L142 134"

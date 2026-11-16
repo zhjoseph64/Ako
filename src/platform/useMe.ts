@@ -1,15 +1,19 @@
 import { useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
 
-import { useDeviceId } from "@/unpredictable/device";
+import { useJailbreakIdentity } from "@/jailbreak/identity";
 import { api } from "../../convex/_generated/api";
+import { useMinute } from "./useNow";
 
 export function useMe() {
-  const deviceId = useDeviceId();
+  const identity = useJailbreakIdentity();
+  const deviceId = identity?.playerId ?? null;
+  const secret = identity?.secret ?? null;
+  const now = useMinute();
   const ensure = useMutation(api.platform.profile.ensure);
   useEffect(() => {
-    if (deviceId) void ensure({ deviceId });
-  }, [deviceId, ensure]);
-  const me = useQuery(api.platform.profile.me, deviceId ? { deviceId } : "skip");
-  return { deviceId, me };
+    if (deviceId && secret) void ensure({ deviceId, secret });
+  }, [deviceId, secret, ensure]);
+  const me = useQuery(api.platform.profile.me, deviceId ? { deviceId, now } : "skip");
+  return { deviceId, secret, now, me };
 }

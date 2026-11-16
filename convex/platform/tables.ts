@@ -13,6 +13,7 @@ export const platAvatar = v.object({ color: v.string(), frame: v.string(), aura:
 export const platformTables = {
   platProfiles: defineTable({
     deviceId: v.string(),
+    secret: v.optional(v.string()),
     name: v.string(),
     avatar: platAvatar,
     rating: v.number(),
@@ -35,6 +36,13 @@ export const platformTables = {
     note: v.string(),
     createdAt: v.number(),
   })
-    .index("by_deviceId_and_createdAt", ["deviceId", "createdAt"])
-    .index("by_createdAt", ["createdAt"]),
+    .index("by_deviceId_and_createdAt", ["deviceId", "createdAt"]),
+
+  platWeekly: defineTable({
+    week: v.number(),
+    deviceId: v.string(),
+    points: v.number(),
+  })
+    .index("by_week_and_points", ["week", "points"])
+    .index("by_deviceId_and_week", ["deviceId", "week"]),
 };

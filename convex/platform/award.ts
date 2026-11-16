@@ -6,10 +6,17 @@ import { platGame } from "./tables";
 
 const DEFAULT_AVATAR = { color: "#B9A6FF", frame: "none", aura: "none" };
 const DEFAULT_NAME = "Player";
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 export function dayKey(time: number) {
   return new Date(time).toISOString().slice(0, 10);
+}
+
+export function weekStart(time: number) {
+  const date = new Date(time);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.getTime();
 }
 
 export async function profileByDevice(ctx: QueryCtx, deviceId: string) {
@@ -41,6 +48,25 @@ export async function ensureProfile(ctx: MutationCtx, deviceId: string, name?: s
   return (await ctx.db.get("platProfiles", id))!;
 }
 
+export async function requireOwnProfile(ctx: MutationCtx, deviceId: string, secret: string) {
+  const profile = await profileByDevice(ctx, deviceId);
+  if (!profile || profile.secret !== secret) throw new Error("This profile belongs to another device");
+  return profile;
+}
+
+async function addWeeklyPoints(ctx: MutationCtx, deviceId: string, time: number, points: number) {
+  const week = weekStart(time);
+  const row = await ctx.db
+    .query("platWeekly")
+    .withIndex("by_deviceId_and_week", (q) => q.eq("deviceId", deviceId).eq("week", week))
+    .unique();
+  if (row) {
+    await ctx.db.patch("platWeekly", row._id, { points: row.points + points });
+  } else {
+    await ctx.db.insert("platWeekly", { week, deviceId, points });
+  }
+}
+
 const awardArgs = v.object({
   deviceId: v.string(),
   name: v.optional(v.string()),
@@ -51,6 +77,9 @@ const awardArgs = v.object({
 });
 
 export async function applyAward(ctx: MutationCtx, args: Infer<typeof awardArgs>) {
+  if (!Number.isFinite(args.basePoints) || !Number.isFinite(args.ratingDelta)) {
+    throw new Error("Award amounts must be finite");
+  }
   const profile = await ensureProfile(ctx, args.deviceId, args.name);
   const now = Date.now();
   const today = dayKey(now);
@@ -81,6 +110,7 @@ export async function applyAward(ctx: MutationCtx, args: Infer<typeof awardArgs>
     note: args.note,
     createdAt: now,
   });
+  if (points > 0) await addWeeklyPoints(ctx, args.deviceId, now, points);
   return points;
 }
 

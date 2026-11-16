@@ -1,35 +1,39 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "../_generated/server";
-import { dayKey, ensureProfile, profileByDevice } from "./award";
+import { DAY_MS, dayKey, ensureProfile, profileByDevice, requireOwnProfile } from "./award";
 import { rankFor, START_RATING } from "./ranks";
 import { platAvatar } from "./tables";
 
-const DAY_MS = 86_400_000;
 const RANGE_MS = { "1D": DAY_MS, "1W": 7 * DAY_MS, "1M": 30 * DAY_MS, "3M": 90 * DAY_MS, ALL: null };
+const credentials = { deviceId: v.string(), secret: v.string() };
 
 export const ensure = mutation({
-  args: { deviceId: v.string() },
+  args: credentials,
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (args.deviceId.length < 8) throw new Error("Invalid device");
+    if (args.deviceId.length < 8 || args.secret.length < 16) throw new Error("Invalid device");
     const player = await ctx.db
       .query("unpPlayers")
       .withIndex("by_deviceId", (q) => q.eq("deviceId", args.deviceId))
       .unique();
-    await ensureProfile(ctx, args.deviceId, player?.name);
+    const profile = await ensureProfile(ctx, args.deviceId, player?.name);
+    if (profile.secret === undefined) {
+      await ctx.db.patch("platProfiles", profile._id, { secret: args.secret });
+    } else if (profile.secret !== args.secret) {
+      throw new Error("This profile belongs to another device");
+    }
     return null;
   },
 });
 
 export const me = query({
-  args: { deviceId: v.string() },
+  args: { deviceId: v.string(), now: v.number() },
   handler: async (ctx, args) => {
     const profile = await profileByDevice(ctx, args.deviceId);
     if (!profile) return null;
-    const today = dayKey(Date.now());
-    const yesterday = dayKey(Date.now() - DAY_MS);
-    const streakAlive = profile.lastPlayedDay === today || profile.lastPlayedDay === yesterday;
+    const streakAlive =
+      profile.lastPlayedDay === dayKey(args.now) || profile.lastPlayedDay === dayKey(args.now - DAY_MS);
     return {
       name: profile.name,
       avatar: profile.avatar,
@@ -46,13 +50,14 @@ export const me = query({
 export const history = query({
   args: {
     deviceId: v.string(),
+    now: v.number(),
     range: v.union(v.literal("1D"), v.literal("1W"), v.literal("1M"), v.literal("3M"), v.literal("ALL")),
   },
   handler: async (ctx, args) => {
     const profile = await profileByDevice(ctx, args.deviceId);
     if (!profile) return [];
     const span = RANGE_MS[args.range];
-    const since = span === null ? profile._creationTime : Math.max(profile._creationTime, Date.now() - span);
+    const since = span === null ? profile._creationTime : Math.max(profile._creationTime, args.now - span);
     const before = await ctx.db
       .query("platLedger")
       .withIndex("by_deviceId_and_createdAt", (q) => q.eq("deviceId", args.deviceId).lt("createdAt", since))
@@ -70,22 +75,22 @@ export const history = query({
 });
 
 export const updateAvatar = mutation({
-  args: { deviceId: v.string(), avatar: platAvatar },
+  args: { ...credentials, avatar: platAvatar },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const profile = await ensureProfile(ctx, args.deviceId);
+    const profile = await requireOwnProfile(ctx, args.deviceId, args.secret);
     await ctx.db.patch("platProfiles", profile._id, { avatar: args.avatar });
     return null;
   },
 });
 
 export const cashOut = mutation({
-  args: { deviceId: v.string(), points: v.number() },
+  args: { ...credentials, points: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const profile = await profileByDevice(ctx, args.deviceId);
+    const profile = await requireOwnProfile(ctx, args.deviceId, args.secret);
+    if (!Number.isFinite(args.points)) throw new Error("Invalid amount");
     const points = Math.floor(args.points);
-    if (!profile) throw new Error("Play a game first");
     if (points < 100) throw new Error("Cash out at least $1.00");
     if (points > profile.points) throw new Error("Not enough points");
     await ctx.db.patch("platProfiles", profile._id, {

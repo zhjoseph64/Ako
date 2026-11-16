@@ -1,8 +1,7 @@
 import { v } from "convex/values";
 
 import { internalMutation } from "../_generated/server";
-import { applyAward } from "./award";
-import { weekStart } from "./leaderboard";
+import { applyAward, weekStart } from "./award";
 
 const FAKE_PLAYERS: [string, number, string][] = [
   ["nova", 3620, "#F0A9DC"],

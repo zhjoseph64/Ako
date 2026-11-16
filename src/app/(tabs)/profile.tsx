@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { RankBadge } from "@/platform/RankBadge";
 import { colors, fonts, formatPoints, radii } from "@/platform/theme";
-import { Avatar, Body, Card, Heading, Screen } from "@/platform/ui";
+import { Avatar } from "@/platform/Avatar";
+import { Body, Card, Heading, Screen } from "@/platform/ui";
 import { useMe } from "@/platform/useMe";
 
 export default function Profile() {

@@ -1,14 +1,17 @@
 import { v } from "convex/values";
 
 import { internal } from "../_generated/api";
-import { Doc } from "../_generated/dataModel";
+import { Doc, Id } from "../_generated/dataModel";
 import {
   internalMutation,
   internalQuery,
   mutation,
+  MutationCtx,
   query,
   QueryCtx,
 } from "../_generated/server";
+import { CREDIT_REWARDS } from "../cashout/config";
+import { awardCredits } from "../cashout/rewards";
 import { applyAward } from "../platform/award";
 import { PROMPT_SETS } from "./seed";
 import { clusterKey, dayInfo, words } from "./text";
@@ -175,6 +178,7 @@ export const submit = mutation({
         outcome: "void",
         judgeReason: rejection,
       });
+      await awardFinishedSession(ctx, round.sessionId);
       return null;
     }
     await ctx.db.patch("unpRounds", round._id, { status: "judging", answer });
@@ -208,44 +212,65 @@ export const roundCrowd = query({
 export const ESCAPE_POINTS = 100;
 export const CROWD_BONUS_POINTS = 50;
 
+async function scoreSession(ctx: QueryCtx, session: Doc<"unpSessions">, sessionRounds: Doc<"unpRounds">[]) {
+  const rounds = [];
+  for (const round of sessionRounds) {
+    const cluster = round.clusterId ? await ctx.db.get("unpClusters", round.clusterId) : null;
+    rounds.push({
+      index: round.index,
+      prompt: round.promptText,
+      answer: round.answer ?? null,
+      outcome: round.outcome ?? null,
+      bonus: round.outcome === "escaped" && (cluster?.humanCount ?? 0) >= 2,
+    });
+  }
+  const escaped = rounds.filter((r) => r.outcome === "escaped").length;
+  const bonus = rounds.filter((r) => r.bonus).length;
+  const over = session.status === "over";
+  const lives = session.lives ?? START_LIVES;
+  const finished = over || (rounds.length > 0 && rounds.every((r) => r.outcome !== null));
+  const survived = finished && !over;
+  return {
+    day: session.day,
+    finished,
+    over,
+    lives,
+    played: rounds.filter((r) => r.outcome !== null).length,
+    total: rounds.length,
+    predicted: rounds.filter((r) => r.outcome === "predicted").length,
+    escaped,
+    bonus,
+    lifePoints: survived ? lives * LIFE_POINTS : 0,
+    points: escaped * ESCAPE_POINTS + bonus * CROWD_BONUS_POINTS + (survived ? lives * LIFE_POINTS : 0),
+    rounds,
+  };
+}
+
+async function awardFinishedSession(ctx: MutationCtx, sessionId: Id<"unpSessions">) {
+  const session = await ctx.db.get("unpSessions", sessionId);
+  const player = session && (await ctx.db.get("unpPlayers", session.playerId));
+  if (!session || !player) return;
+  const rounds = await ctx.db
+    .query("unpRounds")
+    .withIndex("by_sessionId_and_index", (q) => q.eq("sessionId", session._id))
+    .take(20);
+  const score = await scoreSession(ctx, session, rounds);
+  if (!score.finished) return;
+  await awardCredits(ctx, {
+    deviceId: player.deviceId,
+    source: "unpredictable",
+    sourceKey: `unpredictable:${session._id}`,
+    credits: score.points * CREDIT_REWARDS.unpredictableCreditsPerPoint,
+    note: `Unpredictable run ${session.day}: ${score.escaped} escaped`,
+  });
+}
+
 export const summary = query({
   args: { deviceId: v.string() },
   handler: async (ctx, args) => {
     const found = await latestSession(ctx, args.deviceId);
     if (!found?.session) return null;
-    const rounds = [];
-    for (const round of found.rounds) {
-      const cluster = round.clusterId ? await ctx.db.get("unpClusters", round.clusterId) : null;
-      rounds.push({
-        index: round.index,
-        prompt: round.promptText,
-        answer: round.answer ?? null,
-        outcome: round.outcome ?? null,
-        bonus: round.outcome === "escaped" && (cluster?.humanCount ?? 0) >= 2,
-      });
-    }
-    const escaped = rounds.filter((r) => r.outcome === "escaped").length;
-    const bonus = rounds.filter((r) => r.bonus).length;
-    const over = found.session.status === "over";
-    const lives = found.session.lives ?? START_LIVES;
-    const finished = over || (rounds.length > 0 && rounds.every((r) => r.outcome !== null));
-    const survived = finished && !over;
-    return {
-      name: found.player.name,
-      day: found.session.day,
-      finished,
-      over,
-      lives,
-      played: rounds.filter((r) => r.outcome !== null).length,
-      total: rounds.length,
-      predicted: rounds.filter((r) => r.outcome === "predicted").length,
-      escaped,
-      bonus,
-      lifePoints: survived ? lives * LIFE_POINTS : 0,
-      points:
-        escaped * ESCAPE_POINTS + bonus * CROWD_BONUS_POINTS + (survived ? lives * LIFE_POINTS : 0),
-      rounds,
-    };
+    return { name: found.player.name, ...(await scoreSession(ctx, found.session, found.rounds)) };
   },
 });
 
@@ -323,6 +348,7 @@ export const finalizeRound = internalMutation({
         outcome: "void",
         judgeReason: args.reason || "That doesn't really answer the prompt.",
       });
+      await awardFinishedSession(ctx, round.sessionId);
       return null;
     }
     const key = clusterKey(args.cluster) || clusterKey(round.answer ?? "") || "other";
@@ -366,6 +392,7 @@ export const finalizeRound = internalMutation({
       matchedGuess: matchedGuess ?? undefined,
       clusterId,
     });
+    await awardFinishedSession(ctx, round.sessionId);
     const player = await ctx.db.get("unpPlayers", round.playerId);
     if (player) {
       await applyAward(ctx, {

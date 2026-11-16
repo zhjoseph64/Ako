@@ -1,4 +1,5 @@
 import { useAction, useQuery } from "convex/react";
+import { Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Platform, Pressable, StyleSheet, Text } from "react-native";
@@ -73,6 +74,15 @@ export default function Wallet() {
             {error}
           </Body>
         ) : null}
+      </Card>
+      <Card>
+        <Body color={colors.tertiary}>Cash out with Whop</Body>
+        <Body>Turn verified game credits into USD in your Whop balance.</Body>
+        <Link href="/earnings" asChild>
+          <Pressable style={styles.cta} accessibilityRole="button" testID="wallet-open-earnings">
+            <Text style={styles.ctaText}>Open Earnings</Text>
+          </Pressable>
+        </Link>
       </Card>
       <Card>
         <Body color={colors.tertiary}>Cashed out</Body>

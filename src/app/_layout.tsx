@@ -6,6 +6,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 
+import { WalletClaimer } from "@/cashout/credentials";
 import { colors } from "@/platform/theme";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
@@ -24,6 +25,7 @@ export default function RootLayout() {
 
   return (
     <ConvexProvider client={convex}>
+      <WalletClaimer />
       <StatusBar style="light" />
       {loaded ? (
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>

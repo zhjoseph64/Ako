@@ -8,6 +8,13 @@
  * @module
  */
 
+import type * as cashout_admin from "../cashout/admin.js";
+import type * as cashout_config from "../cashout/config.js";
+import type * as cashout_oauth from "../cashout/oauth.js";
+import type * as cashout_rewards from "../cashout/rewards.js";
+import type * as cashout_tables from "../cashout/tables.js";
+import type * as cashout_wallet from "../cashout/wallet.js";
+import type * as cashout_whop from "../cashout/whop.js";
 import type * as http from "../http.js";
 import type * as jailbreak_bossAdapters from "../jailbreak/bossAdapters.js";
 import type * as jailbreak_engine from "../jailbreak/engine.js";
@@ -43,6 +50,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "cashout/admin": typeof cashout_admin;
+  "cashout/config": typeof cashout_config;
+  "cashout/oauth": typeof cashout_oauth;
+  "cashout/rewards": typeof cashout_rewards;
+  "cashout/tables": typeof cashout_tables;
+  "cashout/wallet": typeof cashout_wallet;
+  "cashout/whop": typeof cashout_whop;
   http: typeof http;
   "jailbreak/bossAdapters": typeof jailbreak_bossAdapters;
   "jailbreak/engine": typeof jailbreak_engine;

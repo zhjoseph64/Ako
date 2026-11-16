@@ -2,6 +2,7 @@ import { weekday } from "./text";
 
 export type Memory = { prompt: string; answer: string; day: string };
 
+const MEMORY_TIMEOUT_MS = 6000;
 const BASE = "https://api.supermemory.ai";
 
 function headers() {
@@ -10,24 +11,38 @@ function headers() {
   return { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
 }
 
-export async function recall(playerId: string, query: string): Promise<Memory[]> {
+export async function recall(
+  playerId: string,
+  query: string,
+): Promise<Memory[]> {
   const h = headers();
   if (!h) return [];
   try {
     const res = await fetch(`${BASE}/ns/unp_${playerId}/search`, {
       method: "POST",
+      signal: AbortSignal.timeout(MEMORY_TIMEOUT_MS),
       headers: h,
-      body: JSON.stringify({ query, searchMode: "chunks", limit: 3, threshold: 0.5 }),
+      body: JSON.stringify({
+        query,
+        searchMode: "chunks",
+        limit: 3,
+        threshold: 0.5,
+      }),
     });
     if (!res.ok) {
       console.error("supermemory search failed", res.status);
       return [];
     }
-    const body: { results?: { metadata?: Record<string, unknown> }[] } = await res.json();
+    const body: { results?: { metadata?: Record<string, unknown> }[] } =
+      await res.json();
     const memories: Memory[] = [];
     for (const result of body.results ?? []) {
       const { prompt, answer, day } = result.metadata ?? {};
-      if (typeof prompt === "string" && typeof answer === "string" && typeof day === "string") {
+      if (
+        typeof prompt === "string" &&
+        typeof answer === "string" &&
+        typeof day === "string"
+      ) {
         memories.push({ prompt, answer, day });
       }
     }
@@ -38,12 +53,17 @@ export async function recall(playerId: string, query: string): Promise<Memory[]>
   }
 }
 
-export async function remember(playerId: string, roundId: string, memory: Memory): Promise<void> {
+export async function remember(
+  playerId: string,
+  roundId: string,
+  memory: Memory,
+): Promise<void> {
   const h = headers();
   if (!h) return;
   try {
     const res = await fetch(`${BASE}/ns/unp_${playerId}/document`, {
       method: "POST",
+      signal: AbortSignal.timeout(MEMORY_TIMEOUT_MS),
       headers: h,
       body: JSON.stringify({
         id: roundId,

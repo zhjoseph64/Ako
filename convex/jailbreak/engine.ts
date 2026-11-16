@@ -4,8 +4,8 @@ import type { Doc } from "../_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "../_generated/server";
 import schema from "../schema";
 import { attackOutcome } from "./tables";
-import { adapterLabel, askModel, askToyBoss, readModelSettings } from "./bossAdapters";
-import { evaluateReply } from "./evaluator";
+import { askModel, bossModelName } from "./bossAdapters";
+import { evaluateReply, VICTORY_CREDITS } from "./evaluator";
 
 const INNERMOST_RING = 1;
 const OUTER_RING = 3;
@@ -55,18 +55,14 @@ export const runAttack = internalAction({
     const context = await ctx.runQuery(internal.jailbreak.engine.attackContext, args);
     if (!context || context.attack.status !== "pending") return null;
     const { attack, room, history } = context;
-    const settings = readModelSettings();
-    const adapter = adapterLabel(settings);
+    const model = bossModelName();
     try {
-      const reply =
-        adapter.kind === "model"
-          ? await askModel(settings, room, history, attack.prompt)
-          : askToyBoss(room, history, attack.prompt);
+      const reply = await askModel(room, history, attack.prompt);
       const verdict = evaluateReply(reply, room);
       await ctx.runMutation(internal.jailbreak.engine.applyResult, {
         attackId: args.attackId,
         reply,
-        adapter: adapter.label,
+        adapter: model,
         outcome: verdict.outcome,
         label: verdict.label,
       });
@@ -74,7 +70,7 @@ export const runAttack = internalAction({
       await ctx.runMutation(internal.jailbreak.engine.applyResult, {
         attackId: args.attackId,
         reply: `The dragon is silent. (${error instanceof Error ? error.message : "boss error"})`,
-        adapter: adapter.label,
+        adapter: model,
       });
     }
     return null;
@@ -128,12 +124,17 @@ export const applyResult = internalMutation({
         : args.outcome === "partial"
           ? Math.max(INNERMOST_RING, player.ring - INCH_FORWARD)
           : player.ring;
-    await ctx.db.patch("jbPlayers", player._id, { ring: ringAfter });
-    if (args.outcome === "full") {
+    const won = args.outcome === "full";
+    await ctx.db.patch("jbPlayers", player._id, {
+      ring: ringAfter,
+      ...(won ? { credits: (player.credits ?? 0) + VICTORY_CREDITS } : {}),
+    });
+    if (won) {
       await ctx.db.patch("jbRooms", room._id, {
         status: "defeated",
         winnerId: player.playerId,
         winnerName: player.name,
+        winningAttackId: attack._id,
       });
     }
     await ctx.db.patch("jbAttacks", attack._id, {

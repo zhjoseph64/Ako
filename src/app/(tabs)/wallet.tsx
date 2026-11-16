@@ -2,12 +2,14 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 
 import { Sheet } from "@/platform/Sheet";
+import { GAMES } from "@/platform/games";
+import { PointsGem } from "@/platform/icons";
 import { colors, ctaGradient, fonts, formatCents, formatPoints } from "@/platform/theme";
 import { TopBar } from "@/platform/ui";
 import { useMe } from "@/platform/useMe";
@@ -16,6 +18,29 @@ import { api } from "../../../convex/_generated/api";
 import { TOKEN_PACK } from "../../../convex/whop/pack";
 
 const MIN_CASH_OUT = 100;
+
+const ENTRY_ICONS: Record<string, { d: string; tint: string; bg: string }> = {
+  cashout: { d: "M12 5v14M5.5 12.5 12 19l6.5-6.5", tint: colors.down, bg: "#3A2229" },
+  purchase: { d: "M12 3 20 12 12 21 4 12z", tint: colors.accent, bg: "#2A2547" },
+  leaderboard: { d: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3", tint: "#FFD58A", bg: "#3A3150" },
+  default: { d: "M12 3v18M3 12h18", tint: colors.secondary, bg: colors.raised },
+};
+
+function Icon({ d, color, size = 20 }: { d: string; color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d={d} />
+    </Svg>
+  );
+}
+
+function IconTile({ d, tint, bg }: { d: string; tint: string; bg: string }) {
+  return (
+    <View style={[styles.tile, { backgroundColor: bg }]}>
+      <Icon d={d} color={tint} />
+    </View>
+  );
+}
 const METHODS = [
   { name: "Bank account", detail: "Checking ••• 4821 · free" },
   { name: "Instant to debit card", detail: "Visa ••• 0917 · 1.5% fee" },
@@ -96,145 +121,158 @@ export default function Wallet() {
 
   const spark = activity?.spark ?? [];
   const sparkMax = Math.max(1, ...spark);
-  const sparkPath = spark
-    .map((value, index) => `${index === 0 ? "M" : "L"}${((index / Math.max(1, spark.length - 1)) * 120).toFixed(1)} ${(36 - (value / sparkMax) * 32).toFixed(1)}`)
-    .join(" ");
+  const sparkPoints = spark.map((value, index) => [
+    (index / Math.max(1, spark.length - 1)) * 300,
+    56 - (value / sparkMax) * 48,
+  ]);
+  const sparkLine = sparkPoints.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const sparkArea = sparkPoints.length > 1 ? `${sparkLine} L300 60 L0 60 Z` : "";
+  const monthName = new Date(now).toLocaleString("en-US", { month: "long" });
+
+  const tokenStatus = credited
+    ? `+${formatPoints(credited.tokens)} points added`
+    : checkout === "waiting"
+      ? "Waiting for payment to confirm…"
+      : (checkoutError ?? `+${formatPoints(TOKEN_PACK.tokens)} points instantly`);
 
   return (
     <SafeAreaView edges={["top"]} style={styles.screen} testID="wallet">
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <TopBar title="Wallet" />
 
-        <View style={styles.balanceBlock}>
+        <View style={styles.hero}>
           <Text style={styles.balanceLabel}>Cash available</Text>
           <Text style={styles.balance} testID="wallet-balance">
             {me ? formatCents(me.balanceCents) : "–"}
           </Text>
-          <Text style={styles.balanceNote} testID="wallet-points">
-            {me ? `${formatPoints(me.points)} pts · 100 pts = $1` : " "}
-          </Text>
+          <View style={styles.pointsRow}>
+            <View style={styles.pointsPill}>
+              <PointsGem size={14} />
+              <Text style={styles.pointsText} testID="wallet-points">
+                {me ? `${formatPoints(me.points)} pts` : " "}
+              </Text>
+            </View>
+            <Text style={styles.rate}>100 pts = $1</Text>
+          </View>
+
+          <View style={styles.actions}>
+            <Pressable style={[styles.action, styles.actionPrimary]} onPress={openSheet} disabled={!me} accessibilityRole="button" testID="wallet-cash-out">
+              <Icon d="M12 19V5M5.5 11.5 12 5l6.5 6.5" color={colors.ctaText} size={18} />
+              <Text style={[styles.actionText, { color: colors.ctaText }]}>Cash out</Text>
+            </Pressable>
+            <Pressable style={[styles.action, styles.actionSecondary]} onPress={() => router.push("/ranks")} accessibilityRole="link" testID="wallet-boost">
+              <Icon d="M3 17l6-6 4 4 8-8M15 7h6v6" color={colors.text} size={18} />
+              <Text style={styles.actionText}>Boost</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.actions}>
-          <Pressable style={styles.action} onPress={openSheet} disabled={!me} accessibilityRole="button" testID="wallet-cash-out">
-            <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-              <Defs>
-                <LinearGradient id="wallet-cta" x1="0" y1="0" x2="1" y2="0.2">
-                  <Stop offset="0" stopColor={ctaGradient[0]} />
-                  <Stop offset="0.55" stopColor={ctaGradient[1]} />
-                  <Stop offset="1" stopColor={ctaGradient[2]} />
-                </LinearGradient>
-              </Defs>
-              <Rect width="100%" height="100%" fill="url(#wallet-cta)" />
-            </Svg>
-            <Text style={[styles.actionText, { color: colors.ctaText }]}>Cash out</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.action, { backgroundColor: colors.raised }]}
-            onPress={() => router.push("/ranks")}
-            accessibilityRole="link"
-            testID="wallet-boost"
-          >
-            <Text style={styles.actionText}>Boost earnings</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.today}>
-          <View style={styles.todayIcon}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-              <Circle cx="12" cy="12" r="9" />
-              <Path d="M12 7v5l3 2" />
-            </Svg>
+        <View style={styles.card}>
+          <View style={styles.cardHead}>
+            <IconTile d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6" tint={colors.up} bg="#163533" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardLabel}>Earned in {monthName}</Text>
+              <Text style={styles.monthValue} testID="wallet-month">
+                {formatCents(activity?.monthPoints ?? 0)}
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.todayTitle} testID="wallet-today">
-              {formatPoints(activity?.dayPoints ?? 0)} pts earned today
-            </Text>
-            <Text style={styles.todayDetail}>
-              {me ? `Paid at your ${me.tierLabel} ${me.multiplier}x rank multiplier. Ready to cash out.` : " "}
-            </Text>
-          </View>
-          <Text style={styles.todayCash}>{formatCents(activity?.dayPoints ?? 0)}</Text>
-        </View>
-
-        <View style={styles.month}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.monthLabel}>Earned in {new Date(now).toLocaleString("en-US", { month: "long" })}</Text>
-            <Text style={styles.monthValue} testID="wallet-month">
-              {formatCents(activity?.monthPoints ?? 0)}
-            </Text>
-          </View>
-          <Svg width={120} height={40} viewBox="0 0 120 40">
-            {spark.length > 1 && <Path d={sparkPath} fill="none" stroke={colors.up} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
+          <Svg width="100%" height={60} viewBox="0 0 300 60" preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id="wallet-spark" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={colors.up} stopOpacity={0.35} />
+                <Stop offset="1" stopColor={colors.up} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+            {sparkArea !== "" && <Path d={sparkArea} fill="url(#wallet-spark)" />}
+            {sparkPoints.length > 1 ? (
+              <Path d={sparkLine} fill="none" stroke={colors.up} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+            ) : (
+              <Path d="M0 56 L300 56" stroke={colors.border} strokeWidth={2} strokeDasharray="4 6" />
+            )}
           </Svg>
         </View>
 
-        <View style={styles.month}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.todayTitle}>{formatPoints(TOKEN_PACK.tokens)} token pack</Text>
-            <Text
-              style={[styles.todayDetail, credited && { color: colors.up }, !credited && checkoutError !== null && { color: colors.down }]}
-              testID="wallet-purchase-status"
-            >
-              {credited
-                ? `+${formatPoints(credited.tokens)} points added`
-                : checkout === "waiting"
-                  ? "Waiting for your payment to confirm…"
-                  : (checkoutError ?? `$${TOKEN_PACK.priceUsd.toFixed(2)} · adds ${formatPoints(TOKEN_PACK.tokens)} points · checkout by Whop`)}
-            </Text>
-          </View>
+        <View style={[styles.card, styles.list]}>
           <Pressable
-            style={[styles.slotButton, { backgroundColor: colors.accent }, checkout === "opening" && { opacity: 0.7 }]}
+            style={[styles.listRow, checkout === "opening" && { opacity: 0.6 }]}
             onPress={getTokens}
             disabled={!deviceId || !secret || checkout === "opening"}
             accessibilityRole="button"
             testID="wallet-get-tokens"
           >
-            <Text style={[styles.slotButtonText, { color: colors.ctaText }]}>{checkout === "opening" ? "Opening…" : "Get tokens"}</Text>
+            <View style={[styles.tile, { backgroundColor: "#2A2547" }]}>
+              <PointsGem size={20} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.rowTitle}>{formatPoints(TOKEN_PACK.tokens)} token pack</Text>
+              <Text
+                style={[styles.rowDetail, credited && { color: colors.up }, !credited && checkoutError !== null && { color: colors.down }]}
+                numberOfLines={1}
+                testID="wallet-purchase-status"
+              >
+                {tokenStatus}
+              </Text>
+            </View>
+            <View style={styles.price}>
+              <Text style={styles.priceText}>{checkout === "opening" ? "Opening…" : `$${TOKEN_PACK.priceUsd.toFixed(2)}`}</Text>
+            </View>
           </Pressable>
-        </View>
-
-        <View style={styles.month}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.todayTitle}>Cash out with Whop</Text>
-            <Text style={styles.todayDetail}>Turn verified game credits into USD in your Whop balance.</Text>
-          </View>
-          <Pressable
-            style={[styles.slotButton, { backgroundColor: colors.raised }]}
-            onPress={() => router.push("/earnings")}
-            accessibilityRole="link"
-            testID="wallet-open-earnings"
-          >
-            <Text style={styles.slotButtonText}>Open Earnings</Text>
+          <View style={styles.listDivider} />
+          <Pressable style={styles.listRow} onPress={() => router.push("/earnings")} accessibilityRole="link" testID="wallet-open-earnings">
+            <IconTile d="M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" tint="#FFD2B0" bg="#3A2B2A" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.rowTitle}>Cash out with Whop</Text>
+              <Text style={styles.rowDetail} numberOfLines={1}>
+                Send USD to your Whop balance
+              </Text>
+            </View>
+            <Icon d="M9 6l6 6-6 6" color={colors.muted} size={18} />
           </Pressable>
         </View>
 
         <View style={styles.activity}>
           <Text style={styles.sectionTitle}>Activity</Text>
-          {activity && activity.entries.length === 0 && <Text style={styles.empty}>Points you earn show up here.</Text>}
+          {activity && activity.entries.length === 0 && (
+            <View style={styles.empty}>
+              <IconTile d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" tint={colors.muted} bg={colors.surface} />
+              <Text style={styles.emptyText}>Points you earn show up here.</Text>
+            </View>
+          )}
           {activity?.entries.slice(0, 8).map((entry) => {
             const game = entry.game === "unpredictable" || entry.game === "jailbreak";
+            const art = GAMES.find((g) => g.key === entry.game)?.image;
             const detail = game
-              ? `${entry.rounds} ${entry.game === "unpredictable" ? "round" : "hit"}${entry.rounds === 1 ? "" : "s"} · ${entry.multiplier}x rank bonus`
+              ? `${entry.rounds} ${entry.game === "unpredictable" ? "round" : "hit"}${entry.rounds === 1 ? "" : "s"}`
               : entry.game === "cashout"
-                ? "demo transfer"
+                ? "Demo transfer"
                 : entry.game === "purchase"
                   ? "Whop checkout"
                   : entry.note;
+            const icon = ENTRY_ICONS[entry.game] ?? ENTRY_ICONS.default;
             return (
               <View key={entry.at} style={styles.entry} testID="wallet-activity">
+                {art ? <Image source={art} style={styles.entryArt} /> : <IconTile d={icon.d} tint={icon.tint} bg={icon.bg} />}
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={styles.entryTitle}>{GAME_TITLES[entry.game] ?? entry.game}</Text>
-                  <Text style={styles.entryDetail} numberOfLines={1}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {GAME_TITLES[entry.game] ?? entry.game}
+                  </Text>
+                  <Text style={styles.rowDetail} numberOfLines={1}>
                     {dayLabel(entry.at, now)} · {detail}
                   </Text>
                 </View>
-                <View style={{ alignItems: "flex-end", gap: 2 }}>
+                <View style={{ alignItems: "flex-end", gap: 3 }}>
                   <Text style={[styles.entryAmount, entry.points > 0 && { color: colors.up }]}>
                     {entry.points < 0 ? "−" : "+"}
                     {formatCents(Math.abs(entry.points))}
                   </Text>
-                  <Text style={styles.entryPoints}>{formatPoints(Math.abs(entry.points))} pts</Text>
+                  {game && entry.multiplier > 1 ? (
+                    <View style={styles.boost}>
+                      <Text style={styles.boostText}>{entry.multiplier}x</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.entryPoints}>{formatPoints(Math.abs(entry.points))} pts</Text>
+                  )}
                 </View>
               </View>
             );
@@ -329,60 +367,73 @@ export default function Wallet() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingTop: 4, paddingBottom: 36 },
-  balanceBlock: { paddingTop: 18, paddingHorizontal: 20, gap: 4 },
-  balanceLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.tertiary },
+  hero: {
+    marginTop: 10,
+    marginHorizontal: 20,
+    padding: 20,
+    gap: 4,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "#2E2B4D",
+    backgroundColor: colors.surface,
+    backgroundImage: "linear-gradient(150deg, #2B2450 0%, #1A1830 55%, #15151F 100%)",
+  },
+  balanceLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.tertiary },
   balance: {
     fontFamily: fonts.headingMedium,
     fontSize: 50,
-    lineHeight: 52.5,
+    lineHeight: 54,
     letterSpacing: -1.6,
     color: colors.text,
     fontVariant: ["tabular-nums"],
   },
-  balanceNote: { fontFamily: fonts.body, fontSize: 14.5, color: colors.tertiary },
-  actions: { flexDirection: "row", gap: 10, paddingTop: 20, paddingHorizontal: 20 },
-  action: { flex: 1, height: 52, borderRadius: 999, overflow: "hidden", alignItems: "center", justifyContent: "center" },
-  actionText: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
-  today: {
-    marginTop: 22,
-    marginHorizontal: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+  pointsRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 },
+  pointsPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 6,
+    paddingVertical: 5,
+    paddingLeft: 8,
+    paddingRight: 11,
+    borderRadius: 999,
+    backgroundColor: "rgba(11,11,20,0.5)",
   },
-  todayIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#22213A", alignItems: "center", justifyContent: "center" },
-  todayTitle: { fontFamily: fonts.semibold, fontSize: 14.5, color: colors.text },
-  todayDetail: { fontFamily: fonts.body, fontSize: 12.5, color: colors.tertiary },
-  todayCash: { fontFamily: fonts.semibold, fontSize: 14, color: colors.tertiary },
-  month: {
+  pointsText: { fontFamily: fonts.semibold, fontSize: 13.5, color: colors.text, fontVariant: ["tabular-nums"] },
+  rate: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
+  actions: { flexDirection: "row", gap: 10, marginTop: 18 },
+  action: { flex: 1, height: 50, borderRadius: 999, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center" },
+  actionPrimary: { backgroundImage: `linear-gradient(100deg, ${ctaGradient[0]} 0%, ${ctaGradient[1]} 55%, ${ctaGradient[2]} 100%)` },
+  actionSecondary: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
+  actionText: { fontFamily: fonts.bold, fontSize: 16, color: colors.text },
+  card: {
     marginTop: 12,
     marginHorizontal: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 18,
+    padding: 16,
+    gap: 14,
+    borderRadius: 22,
     backgroundColor: colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
   },
-  monthLabel: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary },
-  monthValue: { fontFamily: fonts.headingMedium, fontSize: 22, color: colors.text },
-  slotButton: { height: 44, paddingHorizontal: 16, borderRadius: 999, alignItems: "center", justifyContent: "center" },
-  slotButtonText: { fontFamily: fonts.bold, fontSize: 14, color: colors.text },
-  activity: { paddingTop: 24, paddingHorizontal: 20 },
-  sectionTitle: { fontFamily: fonts.headingMedium, fontSize: 19, color: colors.text, marginBottom: 4 },
-  empty: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary, paddingVertical: 12 },
-  entry: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  entryTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
-  entryDetail: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  cardLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.tertiary },
+  monthValue: { fontFamily: fonts.headingMedium, fontSize: 22, color: colors.text, fontVariant: ["tabular-nums"] },
+  tile: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  list: { paddingVertical: 4, gap: 0 },
+  listRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 64, paddingVertical: 10 },
+  listDivider: { height: 1, marginLeft: 54, backgroundColor: colors.divider },
+  rowTitle: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
+  rowDetail: { fontFamily: fonts.body, fontSize: 13, color: colors.tertiary },
+  price: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: 999, backgroundColor: colors.accent },
+  priceText: { fontFamily: fonts.bold, fontSize: 13.5, color: colors.ctaText, fontVariant: ["tabular-nums"] },
+  activity: { paddingTop: 26, paddingHorizontal: 20 },
+  sectionTitle: { fontFamily: fonts.headingMedium, fontSize: 19, color: colors.text, marginBottom: 6 },
+  empty: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  emptyText: { fontFamily: fonts.body, fontSize: 14, color: colors.tertiary },
+  entry: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11 },
+  entryArt: { width: 42, height: 42, borderRadius: 13 },
   entryAmount: { fontFamily: fonts.bold, fontSize: 15, color: colors.text, fontVariant: ["tabular-nums"] },
   entryPoints: { fontFamily: fonts.body, fontSize: 12, color: colors.muted },
+  boost: { paddingVertical: 2, paddingHorizontal: 7, borderRadius: 999, backgroundColor: "#26244A" },
+  boostText: { fontFamily: fonts.bold, fontSize: 11, color: colors.accent },
   sheetTitle: { fontFamily: fonts.headingMedium, fontSize: 22, color: colors.text },
   amountBlock: { alignItems: "center", gap: 2, paddingVertical: 6 },
   amount: { fontFamily: fonts.headingMedium, fontSize: 54, letterSpacing: -1.6, color: colors.text, fontVariant: ["tabular-nums"] },

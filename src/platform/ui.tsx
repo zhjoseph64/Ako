@@ -1,6 +1,8 @@
+import { router } from "expo-router";
 import type { ReactNode } from "react";
-import { ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 
 import { colors, fonts, radii, space } from "./theme";
 
@@ -9,6 +11,26 @@ export function Screen({ children, testID }: { children: ReactNode; testID?: str
     <SafeAreaView edges={["top"]} style={styles.screen} testID={testID}>
       <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
     </SafeAreaView>
+  );
+}
+
+export function TopBar({ title, right, fallback = "/" }: { title?: string; right?: ReactNode; fallback?: "/" | "/profile" }) {
+  return (
+    <View style={styles.topBar}>
+      <Pressable
+        onPress={() => (fallback === "/" ? router.navigate("/") : router.canGoBack() ? router.back() : router.replace(fallback))}
+        accessibilityRole="button"
+        accessibilityLabel={fallback === "/" ? "Back to home" : "Back"}
+        style={styles.topBarButton}
+        testID="top-back"
+      >
+        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d="M15 5l-7 7 7 7" />
+        </Svg>
+      </Pressable>
+      {title && <Text style={styles.topBarTitle}>{title}</Text>}
+      {title && (right ?? <View style={{ width: 44 }} />)}
+    </View>
   );
 }
 
@@ -43,6 +65,9 @@ export function Card({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: space.page, paddingTop: 12, paddingBottom: 32, gap: 16 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12 },
+  topBarButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  topBarTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.text },
   heading: { fontFamily: fonts.heading, color: colors.text, letterSpacing: -0.3 },
   card: {
     backgroundColor: colors.surface,

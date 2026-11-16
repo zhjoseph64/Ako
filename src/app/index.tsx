@@ -21,6 +21,9 @@ export default function Index() {
       <Link href="/jailbreak" style={[styles.link, styles.jailbreak]} testID="open-jailbreak">
         Play Jailbreak Boss
       </Link>
+      <Link href="/earnings" style={styles.link} testID="open-earnings">
+        Earnings
+      </Link>
     </View>
   );
 }

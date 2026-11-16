@@ -1,10 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 
-import { useDeviceId } from "@/unpredictable/device";
+import { loadDeviceSecret, useDeviceId } from "@/unpredictable/device";
 
 const NAME_KEY = "jailbreakBoss.name";
-const SECRET_KEY = "jailbreakBoss.secret";
 
 export type JailbreakIdentity = { playerId: string; secret: string; name: string };
 
@@ -17,11 +16,9 @@ export function useJailbreakIdentity(): JailbreakIdentity | null {
   const [stored, setStored] = useState<{ secret: string; name: string } | null>(null);
 
   useEffect(() => {
-    AsyncStorage.multiGet([SECRET_KEY, NAME_KEY]).then(async ([[, secret], [, name]]) => {
-      const ensured = secret ?? randomToken(24);
-      if (!secret) await AsyncStorage.setItem(SECRET_KEY, ensured);
-      setStored({ secret: ensured, name: name ?? "" });
-    });
+    Promise.all([loadDeviceSecret(), AsyncStorage.getItem(NAME_KEY)]).then(([secret, name]) =>
+      setStored({ secret, name: name ?? "" }),
+    );
   }, []);
 
   return playerId && stored ? { playerId, ...stored } : null;

@@ -17,6 +17,7 @@ import type * as cashout_wallet from "../cashout/wallet.js";
 import type * as cashout_whop from "../cashout/whop.js";
 import type * as http from "../http.js";
 import type * as jailbreak_bossAdapters from "../jailbreak/bossAdapters.js";
+import type * as jailbreak_bots from "../jailbreak/bots.js";
 import type * as jailbreak_engine from "../jailbreak/engine.js";
 import type * as jailbreak_evaluator from "../jailbreak/evaluator.js";
 import type * as jailbreak_roomCode from "../jailbreak/roomCode.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   "cashout/whop": typeof cashout_whop;
   http: typeof http;
   "jailbreak/bossAdapters": typeof jailbreak_bossAdapters;
+  "jailbreak/bots": typeof jailbreak_bots;
   "jailbreak/engine": typeof jailbreak_engine;
   "jailbreak/evaluator": typeof jailbreak_evaluator;
   "jailbreak/roomCode": typeof jailbreak_roomCode;

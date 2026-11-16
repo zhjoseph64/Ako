@@ -30,6 +30,7 @@ export default function RootLayout() {
       {loaded ? (
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="ranks" />
           <Stack.Screen name="unpredictable" options={{ animation: "slide_from_bottom" }} />
           <Stack.Screen name="jailbreak" options={{ animation: "slide_from_bottom" }} />
         </Stack>

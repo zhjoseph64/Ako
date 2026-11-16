@@ -20,6 +20,7 @@ export function SetupModal({
 }) {
   const updateSetup = useMutation(api.jailbreak.rooms.updateSetup);
   const newRound = useMutation(api.jailbreak.rooms.newRound);
+  const setDemoBots = useMutation(api.jailbreak.rooms.setDemoBots);
   const [form, setForm] = useState({
     bossName: room.bossName,
     instruction: room.instruction,
@@ -114,6 +115,25 @@ export function SetupModal({
                 style={styles.input}
               />
             </View>
+            {isHost && (
+              <View style={styles.field}>
+                <PixelText size={8} color={colors.gold}>Demo bots</PixelText>
+                <PixelText size={7} color={colors.muted}>
+                  Three scripted bot knights that attack and move between rings but never win. They do not call the AI.
+                </PixelText>
+                <PixelButton
+                  label={room.demoBots ? "Remove demo bots" : "Add demo bots"}
+                  tone={room.demoBots ? "stone" : "rune"}
+                  size={8}
+                  onPress={() =>
+                    setDemoBots({ roomId: room._id, playerId: identity.playerId, secret: identity.secret, enabled: !room.demoBots })
+                      .then(onClose)
+                      .catch((e) => setError(e instanceof Error ? e.message.replace(/^.*Uncaught Error: /s, "").split("\n")[0] : "Could not change bots"))
+                  }
+                  testID="setup-bots"
+                />
+              </View>
+            )}
             {error && <PixelText size={8} color={colors.held} style={{ marginBottom: 8 }}>{error}</PixelText>}
             <View style={[styles.row, { flexWrap: "wrap", marginTop: 6 }]}>
               {isHost && <PixelButton label="Save + new round" tone="ember" onPress={save} size={9} testID="setup-save" />}

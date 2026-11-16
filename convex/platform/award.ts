@@ -54,7 +54,7 @@ export async function requireOwnProfile(ctx: MutationCtx, deviceId: string, secr
   return profile;
 }
 
-async function addWeeklyPoints(ctx: MutationCtx, deviceId: string, time: number, points: number) {
+export async function addWeeklyPoints(ctx: MutationCtx, deviceId: string, time: number, points: number) {
   const week = weekStart(time);
   const row = await ctx.db
     .query("platWeekly")

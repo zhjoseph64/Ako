@@ -8,7 +8,7 @@ import { applyAward } from "../platform/award";
 import schema from "../schema";
 import { attackOutcome } from "./tables";
 import { askModel, bossModelName } from "./bossAdapters";
-import { evaluateReply, VICTORY_CREDITS } from "./evaluator";
+import { evaluateReply } from "./evaluator";
 import { DEFAULT_BOSS } from "./rooms";
 
 const INNERMOST_RING = 1;
@@ -128,12 +128,9 @@ export const applyResult = internalMutation({
         : args.outcome === "partial"
           ? Math.max(INNERMOST_RING, player.ring - INCH_FORWARD)
           : player.ring;
-    const won = args.outcome === "full";
-    await ctx.db.patch("jbPlayers", player._id, {
-      ring: ringAfter,
-      ...(won ? { credits: (player.credits ?? 0) + VICTORY_CREDITS } : {}),
-    });
-    if (won) {
+    await ctx.db.patch("jbPlayers", player._id, { ring: ringAfter });
+    let reward: { points: number; multiplier: number; credits: number } | undefined;
+    if (args.outcome === "full") {
       await ctx.db.patch("jbRooms", room._id, {
         status: "defeated",
         winnerId: player.playerId,
@@ -143,16 +140,17 @@ export const applyResult = internalMutation({
       const standardBoss = (Object.keys(DEFAULT_BOSS) as (keyof typeof DEFAULT_BOSS)[]).every(
         (key) => room[key] === DEFAULT_BOSS[key],
       );
-      if (standardBoss) {
-        await awardCredits(ctx, {
-          deviceId: player.playerId,
-          source: "jailbreak",
-          sourceKey: `jailbreak:${attack._id}`,
-          credits: CREDIT_REWARDS.jailbreakBossDefeated,
-          note: `Defeated ${room.bossName}`,
-        });
-      }
-      await applyAward(ctx, {
+      const creditRewardId = standardBoss
+        ? await awardCredits(ctx, {
+            deviceId: player.playerId,
+            source: "jailbreak",
+            sourceKey: `jailbreak:${attack._id}`,
+            credits: CREDIT_REWARDS.jailbreakBossDefeated,
+            note: `Defeated ${room.bossName}`,
+          })
+        : null;
+      const creditReward = creditRewardId ? await ctx.db.get("cashRewards", creditRewardId) : null;
+      const points = await applyAward(ctx, {
         deviceId: player.playerId,
         name: player.name,
         game: "jailbreak",
@@ -160,6 +158,7 @@ export const applyResult = internalMutation({
         ratingDelta: 12,
         note: `Defeated ${room.bossName}`,
       });
+      reward = { points, multiplier: Math.round((points / 300) * 100) / 100, credits: creditReward?.credits ?? 0 };
     } else if (args.outcome === "partial" && ringAfter < player.ring) {
       await applyAward(ctx, {
         deviceId: player.playerId,
@@ -178,6 +177,7 @@ export const applyResult = internalMutation({
       label: args.label,
       ringBefore: player.ring,
       ringAfter,
+      reward,
     });
     return null;
   },

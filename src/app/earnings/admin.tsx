@@ -1,8 +1,9 @@
 import { useConvex } from "convex/react";
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { PressableScale } from "@/motion";
 import { api } from "../../../convex/_generated/api";
 import { colors, errorMessage, formatUsd } from "@/cashout/format";
 
@@ -36,9 +37,9 @@ export default function CashOutAdmin() {
         autoCapitalize="none"
         style={styles.input}
       />
-      <Pressable accessibilityRole="button" onPress={load} style={styles.button}>
+      <PressableScale accessibilityRole="button" onPress={load} style={styles.button}>
         <Text style={styles.buttonText}>{report ? "Refresh" : "Load report"}</Text>
-      </Pressable>
+      </PressableScale>
       {error && <Text style={{ color: colors.down }}>{error}</Text>}
       {report && (
         <>

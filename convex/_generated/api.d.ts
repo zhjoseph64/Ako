@@ -8,13 +8,19 @@
  * @module
  */
 
-import type * as counter from "../counter.js";
 import type * as jailbreak_bossAdapters from "../jailbreak/bossAdapters.js";
 import type * as jailbreak_engine from "../jailbreak/engine.js";
 import type * as jailbreak_evaluator from "../jailbreak/evaluator.js";
 import type * as jailbreak_roomCode from "../jailbreak/roomCode.js";
 import type * as jailbreak_rooms from "../jailbreak/rooms.js";
 import type * as jailbreak_tables from "../jailbreak/tables.js";
+import type * as platform_award from "../platform/award.js";
+import type * as platform_home from "../platform/home.js";
+import type * as platform_leaderboard from "../platform/leaderboard.js";
+import type * as platform_profile from "../platform/profile.js";
+import type * as platform_ranks from "../platform/ranks.js";
+import type * as platform_seed from "../platform/seed.js";
+import type * as platform_tables from "../platform/tables.js";
 import type * as unpredictable_ai from "../unpredictable/ai.js";
 import type * as unpredictable_crowd from "../unpredictable/crowd.js";
 import type * as unpredictable_game from "../unpredictable/game.js";
@@ -31,13 +37,19 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  counter: typeof counter;
   "jailbreak/bossAdapters": typeof jailbreak_bossAdapters;
   "jailbreak/engine": typeof jailbreak_engine;
   "jailbreak/evaluator": typeof jailbreak_evaluator;
   "jailbreak/roomCode": typeof jailbreak_roomCode;
   "jailbreak/rooms": typeof jailbreak_rooms;
   "jailbreak/tables": typeof jailbreak_tables;
+  "platform/award": typeof platform_award;
+  "platform/home": typeof platform_home;
+  "platform/leaderboard": typeof platform_leaderboard;
+  "platform/profile": typeof platform_profile;
+  "platform/ranks": typeof platform_ranks;
+  "platform/seed": typeof platform_seed;
+  "platform/tables": typeof platform_tables;
   "unpredictable/ai": typeof unpredictable_ai;
   "unpredictable/crowd": typeof unpredictable_crowd;
   "unpredictable/game": typeof unpredictable_game;

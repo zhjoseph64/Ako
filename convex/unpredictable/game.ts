@@ -9,6 +9,7 @@ import {
   query,
   QueryCtx,
 } from "../_generated/server";
+import { applyAward } from "../platform/award";
 import { PROMPT_SETS } from "./seed";
 import { clusterKey, dayInfo, words } from "./text";
 
@@ -358,12 +359,24 @@ export const finalizeRound = internalMutation({
         status: lives === 0 ? "over" : session.status,
       });
     }
+    const escaped = matchedGuess === null;
     await ctx.db.patch("unpRounds", round._id, {
       status: "done",
-      outcome: matchedGuess === null ? "escaped" : "predicted",
+      outcome: escaped ? "escaped" : "predicted",
       matchedGuess: matchedGuess ?? undefined,
       clusterId,
     });
+    const player = await ctx.db.get("unpPlayers", round.playerId);
+    if (player) {
+      await applyAward(ctx, {
+        deviceId: player.deviceId,
+        name: player.name,
+        game: "unpredictable",
+        basePoints: escaped ? 120 : 0,
+        ratingDelta: escaped ? 6 : -4,
+        note: `${escaped ? "Escaped" : "Predicted"}: ${round.promptText}`,
+      });
+    }
     return null;
   },
 });

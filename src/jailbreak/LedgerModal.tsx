@@ -28,7 +28,7 @@ export function LedgerModal({
             <Image source={KNIGHT_SKINS[player.slot % KNIGHT_SKINS.length]} style={styles.avatar} />
             <View style={{ flex: 1 }}>
               <PixelText size={12} color={colors.ink}>
-                {`${player.name}${isMe ? " (you)" : ""}`}
+                {`${player.name}${isMe ? " (you)" : player.isBot ? " · demo bot" : ""}`}
               </PixelText>
               <PixelText size={8} color="#6a5340">
                 {`Strategy ledger · ${ringLabel(player.ring)} · read-only`}

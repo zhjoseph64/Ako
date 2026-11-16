@@ -127,7 +127,7 @@ function Knight({
         />
         <View style={[styles.nameTag, { backgroundColor: color, borderColor: isMe ? colors.gold : colors.ink }]}>
           <PixelText size={tagSize} color={colors.ink} numberOfLines={1}>
-            {player.name}
+            {player.isBot ? `${player.name} · BOT` : player.name}
           </PixelText>
         </View>
       </Pressable>

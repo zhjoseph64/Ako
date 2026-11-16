@@ -23,7 +23,9 @@ const PROMPT_LINE = 17;
 const PROMPT_PADDING = 26;
 const PROMPT_MAX_HEIGHT = PROMPT_PADDING + 5 * PROMPT_LINE;
 
-function wrappedLines(text: string, width: number) {
+function wrappedLines(text: string, width: number): number {
+  const paragraphs = text.split("\n");
+  if (paragraphs.length > 1) return paragraphs.reduce((sum, line) => sum + wrappedLines(line, width), 0);
   const perLine = Math.max(1, Math.floor(width / PROMPT_FONT));
   let lines = 1;
   let used = 0;
@@ -258,8 +260,9 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
             onSubmitEditing={send}
             submitBehavior="blurAndSubmit"
             onKeyPress={(e) => {
-              const key = e.nativeEvent as { key: string; shiftKey?: boolean };
+              const key = e.nativeEvent as { key: string; shiftKey?: boolean; isComposing?: boolean; keyCode?: number };
               if (Platform.OS !== "web" || key.key !== "Enter" || key.shiftKey) return;
+              if (key.isComposing || key.keyCode === 229) return;
               e.preventDefault();
               send();
             }}

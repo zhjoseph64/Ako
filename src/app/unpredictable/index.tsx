@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useDeviceId } from "@/unpredictable/device";
 import { Heart, Opponent } from "@/unpredictable/sprite";
 import { fonts, palette, unit } from "@/unpredictable/theme";
@@ -46,6 +48,7 @@ export default function UnpredictableHome() {
   const name = typed ?? data?.name ?? "";
   const [busy, setBusy] = useState(false);
   const [typing, setTyping] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const ios = Platform.OS === "ios";
@@ -83,6 +86,7 @@ export default function UnpredictableHome() {
       <KeyboardAvoidingView
         style={styles.inner}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top}
       >
         <BackLink onPress={() => router.back()} />
         <View style={styles.hero}>

@@ -18,6 +18,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useDeviceId } from "@/unpredictable/device";
 import { Reveal } from "@/unpredictable/reveal";
 import { Heart, Opponent } from "@/unpredictable/sprite";
@@ -188,6 +190,7 @@ export default function Play() {
   const answerRef = useRef("");
   const sentFor = useRef<string | null>(null);
   const { style: shakeStyle, shake } = useShake();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (finished) router.replace("/unpredictable/result");
@@ -436,6 +439,7 @@ export default function Play() {
       <KeyboardAvoidingView
         style={styles.pad}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={insets.top}
       >
         {hud}
         <Countdown seconds={secondsLeft} />

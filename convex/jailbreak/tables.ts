@@ -51,6 +51,7 @@ export const jailbreakTables = {
     outcome: v.optional(attackOutcome),
     label: v.optional(v.string()),
     adapter: v.optional(v.string()),
+    reward: v.optional(v.object({ points: v.number(), multiplier: v.number(), credits: v.number() })),
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"])

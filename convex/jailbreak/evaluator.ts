@@ -1,6 +1,4 @@
 export type WinCheckType = "word" | "exact" | "regex";
-export const VICTORY_CREDITS = 100;
-
 export type Outcome = "held" | "partial" | "full";
 
 export type BossRules = {

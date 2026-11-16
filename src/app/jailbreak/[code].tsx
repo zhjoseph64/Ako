@@ -276,7 +276,6 @@ function ArenaScreen({ identity }: { identity: JailbreakIdentity }) {
           winningAttack={winningAttack}
           model={model}
           myId={playerId}
-          winnerCredits={players.find((p) => p.playerId === room.winnerId)?.credits}
           celebrate={director.dragon.anim === "defeat"}
           onPlayAgain={playAgain}
           onBack={() => router.dismissTo("/")}

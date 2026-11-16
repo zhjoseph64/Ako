@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useJailbreakIdentity } from "@/jailbreak/identity";
 import { api } from "../../convex/_generated/api";
@@ -14,6 +14,8 @@ export function useMe() {
   useEffect(() => {
     if (deviceId && secret) void ensure({ deviceId, secret });
   }, [deviceId, secret, ensure]);
-  const me = useQuery(api.platform.profile.me, deviceId ? { deviceId, now } : "skip");
+  const fresh = useQuery(api.platform.profile.me, deviceId ? { deviceId, now } : "skip");
+  const [me, setMe] = useState(fresh);
+  if (fresh !== undefined && fresh !== me) setMe(fresh);
   return { deviceId, secret, now, me };
 }
